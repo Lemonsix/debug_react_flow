@@ -15,6 +15,9 @@ interface EditableEdgeData extends GraphEdge {
 
 interface EditableEdgeProps extends EdgeProps<EditableEdgeData> {
   onConditionUpdate?: (edgeId: string, condition: EdgeCondition) => void;
+  isEditing?: boolean;
+  onStartEditing?: () => void;
+  onStopEditing?: () => void;
 }
 
 export default function EditableEdge({
@@ -28,8 +31,13 @@ export default function EditableEdge({
   data,
   markerEnd,
   onConditionUpdate,
+  isEditing: globalIsEditing = false,
+  onStartEditing,
+  onStopEditing,
 }: EditableEdgeProps) {
-  const [isEditing, setIsEditing] = useState(data?.editable || false);
+  // Usar el estado global de edición en lugar del local
+  const isEditing = globalIsEditing;
+
   const [condition, setCondition] = useState<EdgeCondition>(
     data?.condition || {
       field: "points",
@@ -70,9 +78,7 @@ export default function EditableEdge({
       if (onConditionUpdate && id) {
         onConditionUpdate(id, condition);
       }
-
-      // Cerrar la edición inmediatamente
-      setIsEditing(false);
+      // La edición se cierra automáticamente desde TournamentEditor
     } catch (error) {
       console.error("Error saving condition:", error);
     }
@@ -87,8 +93,8 @@ export default function EditableEdge({
         value: 0,
       }
     );
-    setIsEditing(false);
-  }, [data?.condition]);
+    onStopEditing?.();
+  }, [data?.condition, onStopEditing]);
 
   // Generar label para mostrar la condición
   const getConditionLabel = () => {
@@ -132,7 +138,7 @@ export default function EditableEdge({
               </span>
               <EditToggle
                 isEditing={false}
-                onToggle={() => setIsEditing(true)}
+                onToggle={() => onStartEditing?.()}
               />
             </div>
           ) : (

@@ -13,14 +13,21 @@ interface EditableNodeProps {
   data: GraphNode;
   onChange?: (updates: Partial<GraphNode>) => void;
   isConnectable?: boolean;
+  isEditing?: boolean;
+  onStartEditing?: () => void;
+  onStopEditing?: () => void;
 }
 
 export default function EditableNode({
   data,
   onChange,
   isConnectable = true,
+  isEditing: globalIsEditing = false,
+  onStartEditing,
+  onStopEditing,
 }: EditableNodeProps) {
-  const [isEditing, setIsEditing] = useState(data.editable || false);
+  // Usar el estado global de edición en lugar del local
+  const isEditing = globalIsEditing;
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
@@ -57,7 +64,7 @@ export default function EditableNode({
         editable: false,
       });
     }
-    setIsEditing(false);
+    // La edición se cierra automáticamente desde TournamentEditor
   }, [formData, validation.isValid, onChange]);
 
   // Cancelar edición y revertir cambios
@@ -67,8 +74,8 @@ export default function EditableNode({
       capacity: data.capacity,
       sinkConfig: data.sinkConfig || { sinkType: "qualification" as const },
     });
-    setIsEditing(false);
-  }, [data]);
+    onStopEditing?.();
+  }, [data, onStopEditing]);
 
   // Configuración visual por tipo de nodo
   const nodeTypeConfig = {
@@ -129,7 +136,12 @@ export default function EditableNode({
             </div>
           </div>
 
-          <EditToggle isEditing={isEditing} onToggle={setIsEditing} />
+          <EditToggle
+            isEditing={isEditing}
+            onToggle={(editing) =>
+              editing ? onStartEditing?.() : onStopEditing?.()
+            }
+          />
         </div>
 
         {/* Información del nodo */}

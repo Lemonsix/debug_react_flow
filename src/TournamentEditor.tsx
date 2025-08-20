@@ -5,6 +5,8 @@ import ReactFlow, {
   MiniMap,
   type Edge,
   type Node,
+  type NodeProps,
+  type EdgeProps,
   MarkerType,
   useNodesState,
   useEdgesState,
@@ -16,6 +18,7 @@ import dagre from "dagre";
 import type {
   TournamentGraph,
   GraphNode,
+  GraphEdge,
   NodeType,
   HistoryAction,
   HistoryActionType,
@@ -25,13 +28,15 @@ import type {
 import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 
+// Tipo local para edges editables
+interface EditableEdgeData extends GraphEdge {
+  label?: string;
+}
+
 const NODE_W = 400;
 const NODE_H = 280;
 
-// Tipos de nodos y edges
-const nodeTypes = {
-  editable: EditableNode,
-};
+// Tipos de nodos y edges serán definidos dentro del componente
 
 interface TournamentEditorProps {
   graph: TournamentGraph;
@@ -53,9 +58,31 @@ export default function TournamentEditor({
     currentIndex: -1,
   });
 
+  // Estado global para controlar qué elemento está siendo editado
+  const [currentlyEditing, setCurrentlyEditing] = useState<{
+    type: "node" | "edge" | null;
+    id: string | null;
+  }>({ type: null, id: null });
+
+  // Funciones para manejar el estado de edición global
+  const startEditing = useCallback((type: "node" | "edge", id: string) => {
+    setCurrentlyEditing({ type, id });
+  }, []);
+
+  const stopEditing = useCallback(() => {
+    setCurrentlyEditing({ type: null, id: null });
+  }, []);
+
+  const isCurrentlyEditing = useCallback(
+    (type: "node" | "edge", id: string) => {
+      return currentlyEditing.type === type && currentlyEditing.id === id;
+    },
+    [currentlyEditing]
+  );
+
   // Sistema de historial
   const addToHistory = useCallback(
-    (actionType: HistoryActionType, data: Record<string, any>) => {
+    (actionType: HistoryActionType, data: Record<string, unknown>) => {
       const action: HistoryAction = {
         id: `action-${Date.now()}`,
         type: actionType,
@@ -163,21 +190,65 @@ export default function TournamentEditor({
         beforeState: edges.find((e) => e.id === edgeId)?.data,
         afterState: { ...edges.find((e) => e.id === edgeId)?.data, condition },
       });
+
+      // Cerrar la edición del edge después de guardar
+      stopEditing();
     },
-    [setEdges, edges, addToHistory]
+    [setEdges, edges, addToHistory, stopEditing]
+  );
+
+  // Función para manejar cambios en nodos
+  const handleNodeChange = useCallback(
+    (nodeId: string, updates: Partial<GraphNode>) => {
+      setNodes((nodes) =>
+        nodes.map((node) =>
+          node.id === nodeId
+            ? {
+                ...node,
+                data: { ...node.data, ...updates },
+              }
+            : node
+        )
+      );
+
+      // Si el nodo se guarda, cerrar la edición
+      if (updates.editable === false) {
+        stopEditing();
+      }
+    },
+    [setNodes, stopEditing]
+  );
+
+  const nodeTypes = useMemo(
+    () => ({
+      editable: (props: NodeProps<GraphNode>) => (
+        <EditableNode
+          data={props.data}
+          onChange={(updates) => handleNodeChange(props.id, updates)}
+          isConnectable={props.isConnectable}
+          isEditing={isCurrentlyEditing("node", props.id)}
+          onStartEditing={() => startEditing("node", props.id)}
+          onStopEditing={stopEditing}
+        />
+      ),
+    }),
+    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing]
   );
 
   const edgeTypes = useMemo(
     () => ({
-      editable: (props: any) => (
+      editable: (props: EdgeProps<EditableEdgeData>) => (
         <EditableEdge
           {...props}
           onConditionUpdate={handleEdgeConditionUpdate}
+          isEditing={isCurrentlyEditing("edge", props.id)}
+          onStartEditing={() => startEditing("edge", props.id)}
+          onStopEditing={stopEditing}
         />
       ),
       simple: SimpleEdge,
     }),
-    [handleEdgeConditionUpdate]
+    [handleEdgeConditionUpdate, isCurrentlyEditing, startEditing, stopEditing]
   );
 
   // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
@@ -376,7 +447,7 @@ export default function TournamentEditor({
           setEdges((eds) =>
             eds.map((e) =>
               e.id === action.data.edgeId
-                ? { ...e, data: action.data.beforeState as any }
+                ? { ...e, data: action.data.beforeState as unknown }
                 : e
             )
           );
@@ -469,7 +540,7 @@ export default function TournamentEditor({
           setEdges((eds) =>
             eds.map((e) =>
               e.id === action.data.edgeId
-                ? { ...e, data: action.data.afterState as any }
+                ? { ...e, data: action.data.afterState as unknown }
                 : e
             )
           );
