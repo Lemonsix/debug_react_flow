@@ -13,7 +13,12 @@ interface EditableEdgeData extends GraphEdge {
   label?: string;
 }
 
+interface EditableEdgeProps extends EdgeProps<EditableEdgeData> {
+  onConditionUpdate?: (edgeId: string, condition: EdgeCondition) => void;
+}
+
 export default function EditableEdge({
+  id,
   sourceX,
   sourceY,
   targetX,
@@ -22,7 +27,8 @@ export default function EditableEdge({
   targetPosition,
   data,
   markerEnd,
-}: EdgeProps<EditableEdgeData>) {
+  onConditionUpdate,
+}: EditableEdgeProps) {
   const [isEditing, setIsEditing] = useState(data?.editable || false);
   const [condition, setCondition] = useState<EdgeCondition>(
     data?.condition || {
@@ -49,10 +55,12 @@ export default function EditableEdge({
   const handleSave = useCallback(() => {
     if (!validation.isValid) return;
 
-    // Aquí iría la lógica para actualizar el edge en el estado global
-    console.log("Saving edge condition:", condition);
+    // Actualizar el edge en el estado global
+    if (onConditionUpdate && id) {
+      onConditionUpdate(id, condition);
+    }
     setIsEditing(false);
-  }, [condition, validation.isValid]);
+  }, [condition, validation.isValid, onConditionUpdate, id]);
 
   // Cancelar edición
   const handleCancel = useCallback(() => {

@@ -272,7 +272,7 @@ export function EditToggle({
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
       `}
     >
-      {isEditing ? "✓ Editing" : "✏️ Edit"}
+      {isEditing ? "✓ Editing" : "✏️"}
     </button>
   );
 }

@@ -20,6 +20,7 @@ import type {
   HistoryAction,
   HistoryActionType,
   HistoryState,
+  EdgeCondition,
 } from "./types";
 import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
@@ -30,11 +31,6 @@ const NODE_H = 280;
 // Tipos de nodos y edges
 const nodeTypes = {
   editable: EditableNode,
-};
-
-const edgeTypes = {
-  editable: EditableEdge,
-  simple: SimpleEdge,
 };
 
 interface TournamentEditorProps {
@@ -143,6 +139,46 @@ export default function TournamentEditor({
   // Estado para nodos y edges
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+
+  // Función para actualizar condiciones de edges
+  const handleEdgeConditionUpdate = useCallback(
+    (edgeId: string, condition: EdgeCondition) => {
+      setEdges((edges) =>
+        edges.map((edge) =>
+          edge.id === edgeId
+            ? {
+                ...edge,
+                data: {
+                  ...edge.data,
+                  condition,
+                },
+              }
+            : edge
+        )
+      );
+
+      // Agregar al historial
+      addToHistory("EDIT_EDGE", {
+        edgeId,
+        beforeState: edges.find((e) => e.id === edgeId)?.data,
+        afterState: { ...edges.find((e) => e.id === edgeId)?.data, condition },
+      });
+    },
+    [setEdges, edges, addToHistory]
+  );
+
+  const edgeTypes = useMemo(
+    () => ({
+      editable: (props: any) => (
+        <EditableEdge
+          {...props}
+          onConditionUpdate={handleEdgeConditionUpdate}
+        />
+      ),
+      simple: SimpleEdge,
+    }),
+    [handleEdgeConditionUpdate]
+  );
 
   // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
   useMemo(() => {
