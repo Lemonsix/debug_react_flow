@@ -202,18 +202,18 @@ export default function EditableEdge({
                       value: Number(e.target.value),
                     })
                   }
-                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none "
+                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
                   placeholder="0"
                 />
               </div>
 
-              {/* Botones mini */}
-              <div className="flex gap-0.5 justify-center">
+              {/* Botones mejorados */}
+              <div className="flex gap-1 justify-center">
                 <button
                   onClick={handleSave}
                   disabled={!validation.isValid}
                   className={`
-                    px-1.5 py-0.5 text-xs rounded transition-colors
+                    px-3 py-1.5 text-xs font-medium rounded-md transition-colors min-w-12
                     ${
                       validation.isValid
                         ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
@@ -229,14 +229,14 @@ export default function EditableEdge({
                         }`
                   }
                 >
-                  ✓
+                  Save
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="px-1.5 py-0.5 text-xs text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors min-w-12"
                   title="Cancel"
                 >
-                  ✕
+                  Cancel
                 </button>
               </div>
             </div>

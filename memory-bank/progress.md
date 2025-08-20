@@ -139,10 +139,12 @@ src/
 
 #### ✅ Edges Animados y Seleccionables
 - **Animaciones CSS Fluidas**: Líneas punteadas animadas con efecto de flujo continuo
+- **Dirección Correcta**: strokeDashoffset: -24 para flujo source → target
 - **Área de Selección Ampliada**: Paths invisibles más anchos para facilitar el click
 - **Eliminación Intuitiva**: Selección visual clara + tecla Delete para remover
 - **CSS Keyframes**: Animación `dash-flow` personalizada con `strokeDashoffset`
-- **Feedback de Estado**: Colores distintivos para seleccionado/hover/edición
+- **Feedback de Estado**: Estados distintivos (animado azul/sólido negro) según selección
+- **Formulario Mejorado**: Input number compacto (w-14) y botones rectangulares legibles
 
 #### ✅ Rediseño de Nodos Sink
 - **Interface Simplificada**: Eliminación de NodeTypeSelector para nodos sink

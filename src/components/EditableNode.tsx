@@ -347,21 +347,21 @@ export default function EditableNode({
         </div>
       )}
 
-      {/* Handles para conexiones - siempre visibles */}
+      {/* Handles para conexiones - siempre visibles y más grandes */}
       <Handle
         type="target"
         position={Position.Left}
         isConnectable={isConnectable}
-        className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
-        style={{ left: -6 }}
+        className="w-5 h-5 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors shadow-md"
+        style={{ left: -10 }}
       />
       {formData.type !== "sink" && (
         <Handle
           type="source"
           position={Position.Right}
           isConnectable={isConnectable}
-          className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
-          style={{ right: -6 }}
+          className="w-5 h-5 bg-white border-2 border-gray-400 hover:border-blue-500 transition-colors shadow-md"
+          style={{ right: -10 }}
         />
       )}
     </div>

@@ -8,8 +8,12 @@
 #### ✅ Botón de Edición Arreglado
 Se corrigió un problema donde el botón de edición no aparecía en nodos cuando no estaban en modo edición. El problema era una condición lógica incorrecta que dependía de `data.editable` en lugar de verificar la disponibilidad del callback `onStartEditing`.
 
-#### ✅ Handles de Conexión Siempre Visibles
-Los handles (puntos de conexión) ahora son siempre visibles en los nodos, no solo cuando están en modo edición. Esto facilita la conexión manual de nodos arrastrando desde los handles.
+#### ✅ Handles de Conexión Mejorados
+Los handles (puntos de conexión) han sido significativamente mejorados:
+- **Siempre Visibles**: No requieren modo edición para aparecer
+- **Tamaño Aumentado**: De 12px a 20px para mejor visibilidad y facilidad de uso
+- **Mejor Feedback**: Hover azul y sombras para indicar interactividad
+- **Posicionamiento Centrado**: Offset ajustado para alineación perfecta
 
 #### ✅ Proximity Connect Implementado
 Se implementó la funcionalidad de [proximity connect de React Flow](https://reactflow.dev/examples/nodes/proximity-connect) que permite:
@@ -26,6 +30,8 @@ Se mejoraron significativamente los edges con:
 - **Eliminación Mejorada**: Edges completamente seleccionables con tecla Delete
 - **Feedback Visual**: Estados distintivos (animado/sólido) según selección
 - **Status Bar Mejorado**: Información clara sobre edges seleccionados con instrucciones
+- **Formulario Optimizado**: Input number compacto (w-14) y botones rectangulares más grandes
+- **UX Mejorada**: Botones "Save" y "Cancel" con texto claro en lugar de símbolos
 
 #### ✅ Nodos Sink Simplificados (2024-12-30)
 Se rediseñó completamente la interfaz de nodos Sink para mayor simplicidad:
