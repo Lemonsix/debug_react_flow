@@ -1,4 +1,4 @@
-export type NodeType = "match" | "aggregator" | "sink";
+export type NodeType = "match" | "sink";
 
 export type PhaseSink = {
   kind: string;

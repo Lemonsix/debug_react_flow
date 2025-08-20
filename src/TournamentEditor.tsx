@@ -49,7 +49,6 @@ export default function TournamentEditor({
   editable = true,
   onGraphChange,
 }: TournamentEditorProps) {
-  const [isEditMode, setIsEditMode] = useState(editable);
   const [copiedNode, setCopiedNode] = useState<GraphNode | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -113,8 +112,8 @@ export default function TournamentEditor({
   const { rfNodes, rfEdges } = useMemo(() => {
     const rfNodes: Node[] = graph.nodes.map((n) => ({
       id: n.id,
-      type: isEditMode ? "editable" : "default",
-      data: { ...n, editable: isEditMode },
+      type: editable ? "editable" : "default",
+      data: { ...n, editable },
       position: n.position || { x: 0, y: 0 },
     }));
 
@@ -125,8 +124,8 @@ export default function TournamentEditor({
           id: e.id,
           source: e.fromNode,
           target: e.toNode!,
-          type: isEditMode ? "editable" : "simple",
-          data: { ...e, editable: isEditMode },
+          type: editable ? "editable" : "simple",
+          data: { ...e, editable },
           style: { strokeWidth: 1.5 },
           markerEnd: { type: MarkerType.ArrowClosed },
         })
@@ -161,7 +160,7 @@ export default function TournamentEditor({
     }
 
     return { rfNodes, rfEdges };
-  }, [graph, isEditMode]);
+  }, [graph, editable]);
 
   // Estado para nodos y edges
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
@@ -312,7 +311,7 @@ export default function TournamentEditor({
   // Manejar conexiones entre nodos
   const onConnect = useCallback(
     (params: Connection) => {
-      if (!isEditMode) return;
+      if (!editable) return;
 
       const newEdge: Edge = {
         id: `edge-${Date.now()}`,
@@ -342,7 +341,7 @@ export default function TournamentEditor({
         afterState: newEdge,
       });
     },
-    [isEditMode, setEdges, addToHistory]
+    [editable, setEdges, addToHistory]
   );
 
   // Agregar nuevo nodo
@@ -578,38 +577,38 @@ export default function TournamentEditor({
   // Manejar selección de nodos
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      if (isEditMode) {
+      if (editable) {
         setSelectedNodeId(node.id);
         setSelectedEdgeId(null); // Deseleccionar edge si se selecciona nodo
       }
     },
-    [isEditMode]
+    [editable]
   );
 
   // Manejar selección de edges
   const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
-      if (isEditMode) {
+      if (editable) {
         setSelectedEdgeId(edge.id);
         setSelectedNodeId(null); // Deseleccionar nodo si se selecciona edge
       }
     },
-    [isEditMode]
+    [editable]
   );
 
   // Copiar nodo seleccionado
   const copySelectedNode = useCallback(() => {
-    if (selectedNodeId && isEditMode) {
+    if (selectedNodeId && editable) {
       const nodeData = nodes.find((n) => n.id === selectedNodeId)?.data;
       if (nodeData) {
         setCopiedNode(nodeData);
       }
     }
-  }, [selectedNodeId, nodes, isEditMode]);
+  }, [selectedNodeId, nodes, editable]);
 
   // Pegar nodo copiado
   const pasteNode = useCallback(() => {
-    if (copiedNode && isEditMode) {
+    if (copiedNode && editable) {
       const newId = `node-${Date.now()}`;
 
       // Calcular posición basada en la posición actual del nodo en React Flow, no en los datos del grafo
@@ -654,11 +653,11 @@ export default function TournamentEditor({
       // Seleccionar el nodo recién pegado
       setSelectedNodeId(newId);
     }
-  }, [copiedNode, isEditMode, setNodes, nodes, selectedNodeId, addToHistory]);
+  }, [copiedNode, editable, setNodes, nodes, selectedNodeId, addToHistory]);
 
   // Eliminar nodo seleccionado
   const deleteSelectedNode = useCallback(() => {
-    if (selectedNodeId && isEditMode) {
+    if (selectedNodeId && editable) {
       // Guardar estado antes de eliminar
       const nodeToDelete = nodes.find((n) => n.id === selectedNodeId);
       const edgesToDelete = edges.filter(
@@ -687,7 +686,7 @@ export default function TournamentEditor({
     }
   }, [
     selectedNodeId,
-    isEditMode,
+    editable,
     setNodes,
     setEdges,
     nodes,
@@ -697,7 +696,7 @@ export default function TournamentEditor({
 
   // Eliminar edge seleccionado
   const deleteSelectedEdge = useCallback(() => {
-    if (selectedEdgeId && isEditMode) {
+    if (selectedEdgeId && editable) {
       // Guardar estado antes de eliminar
       const edgeToDelete = edges.find((e) => e.id === selectedEdgeId);
 
@@ -713,12 +712,12 @@ export default function TournamentEditor({
 
       setSelectedEdgeId(null);
     }
-  }, [selectedEdgeId, isEditMode, setEdges, edges, addToHistory]);
+  }, [selectedEdgeId, editable, setEdges, edges, addToHistory]);
 
   // Manejar keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isEditMode) return;
+      if (!editable) return;
 
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "c" || e.key === "C") {
@@ -747,7 +746,7 @@ export default function TournamentEditor({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [
-    isEditMode,
+    editable,
     copySelectedNode,
     pasteNode,
     deleteSelectedNode,
@@ -796,68 +795,42 @@ export default function TournamentEditor({
   return (
     <div className="h-[80vh] w-full rounded-lg border border-gray-200 bg-gray-50 relative">
       {/* Toolbar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
-        {/* Controles de modo */}
-        <div className="flex items-center gap-2 bg-white rounded-lg shadow-sm border border-gray-200 p-2">
-          <button
-            onClick={() => setIsEditMode(!isEditMode)}
-            className={`
-              px-3 py-2 text-sm font-medium rounded-md transition-all duration-200
-              ${
-                isEditMode
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }
-            `}
-          >
-            {isEditMode ? "✏️ Edit Mode" : "👁️ View Mode"}
-          </button>
-        </div>
-
-        {/* Acciones */}
-        <div className="flex items-center gap-2">
-          {isEditMode && (
-            <>
-              {/* Botones para agregar nodos */}
-              <div className="flex gap-1 bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-                <button
-                  onClick={() => addNewNode("match")}
-                  className="px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
-                >
-                  + Match
-                </button>
-                <button
-                  onClick={() => addNewNode("aggregator")}
-                  className="px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
-                >
-                  + Aggregator
-                </button>
-                <button
-                  onClick={() => addNewNode("sink")}
-                  className="px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
-                >
-                  + Sink
-                </button>
-              </div>
-
-              {/* Exportar */}
+      <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+        {editable && (
+          <>
+            {/* Botones para agregar nodos */}
+            <div className="flex gap-1 bg-white rounded-lg shadow-sm border border-gray-200 p-1">
               <button
-                onClick={exportConfiguration}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition-colors"
+                onClick={() => addNewNode("match")}
+                className="px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
               >
-                💾 Export JSON
+                + Match
               </button>
-            </>
-          )}
+              <button
+                onClick={() => addNewNode("sink")}
+                className="px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
+              >
+                + Sink
+              </button>
+            </div>
 
-          {/* Reset Layout */}
-          <button
-            onClick={resetLayout}
-            className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md"
-          >
-            ↻ Reset Layout
-          </button>
-        </div>
+            {/* Exportar */}
+            <button
+              onClick={exportConfiguration}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-green-700 transition-colors"
+            >
+              💾 Export JSON
+            </button>
+          </>
+        )}
+
+        {/* Reset Layout */}
+        <button
+          onClick={resetLayout}
+          className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md"
+        >
+          ↻ Reset Layout
+        </button>
       </div>
 
       {/* React Flow Canvas */}
@@ -872,7 +845,7 @@ export default function TournamentEditor({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={true}
-        nodesConnectable={isEditMode}
+        nodesConnectable={editable}
         elementsSelectable={true}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -888,12 +861,12 @@ export default function TournamentEditor({
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <span>Nodes: {nodes.length}</span>
           <span>Edges: {edges.length}</span>
-          <span>Mode: {isEditMode ? "Edit" : "View"}</span>
+          <span>Mode: {editable ? "Edit" : "View"}</span>
           <span>
             History: {history.currentIndex + 1}/{history.actions.length}
           </span>
           {graph.esport && <span>Esport: {graph.esport.toUpperCase()}</span>}
-          {isEditMode && (
+          {editable && (
             <>
               {selectedNodeId && (
                 <span>Selected Node: {selectedNodeId.slice(0, 8)}...</span>
@@ -910,7 +883,7 @@ export default function TournamentEditor({
       </div>
 
       {/* Help text for shortcuts */}
-      {isEditMode && (
+      {editable && (
         <div className="absolute bottom-4 right-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm p-2 text-xs text-blue-700">
           <div>
             💡 <strong>Keyboard Shortcuts:</strong>

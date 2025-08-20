@@ -85,7 +85,6 @@ interface NodeTypeSelectorProps {
 export function NodeTypeSelector({ value, onChange }: NodeTypeSelectorProps) {
   const nodeTypeOptions = [
     { value: "match", label: "Match" },
-    { value: "aggregator", label: "Aggregator" },
     { value: "sink", label: "Sink" },
   ];
 

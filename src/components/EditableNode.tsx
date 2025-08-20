@@ -27,7 +27,7 @@ export default function EditableNode({
   onStopEditing,
 }: EditableNodeProps) {
   // Usar el estado global de edición en lugar del local
-  const isEditing = globalIsEditing;
+  const isEditing = globalIsEditing || data.editable;
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
@@ -64,8 +64,9 @@ export default function EditableNode({
         editable: false,
       });
     }
-    // La edición se cierra automáticamente desde TournamentEditor
-  }, [formData, validation.isValid, onChange]);
+    // Desactivar la edición automáticamente
+    onStopEditing?.();
+  }, [formData, validation.isValid, onChange, onStopEditing]);
 
   // Cancelar edición y revertir cambios
   const handleCancel = useCallback(() => {
@@ -74,6 +75,7 @@ export default function EditableNode({
       capacity: data.capacity,
       sinkConfig: data.sinkConfig || { sinkType: "qualification" as const },
     });
+    // Desactivar la edición automáticamente
     onStopEditing?.();
   }, [data, onStopEditing]);
 
@@ -85,13 +87,6 @@ export default function EditableNode({
       text: "text-emerald-800",
       accent: "bg-emerald-500",
       icon: "M",
-    },
-    aggregator: {
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-      text: "text-blue-800",
-      accent: "bg-blue-500",
-      icon: "A",
     },
     sink: {
       bg: "bg-purple-50",
@@ -111,9 +106,14 @@ export default function EditableNode({
         relative bg-white border-2 ${config.border} rounded-lg shadow-sm
         hover:shadow-md transition-all duration-200
         ${isEditing ? "ring-2 ring-blue-400 ring-opacity-50" : ""}
-        cursor-grab active:cursor-grabbing
+        ${isEditing ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
         min-w-80 max-w-80
       `}
+      onClick={() => {
+        if (data.editable && !isEditing && onStartEditing) {
+          onStartEditing();
+        }
+      }}
     >
       {/* Header del nodo con toggle de edición */}
       <div className="p-4 border-b border-gray-100">
@@ -135,13 +135,6 @@ export default function EditableNode({
               </div>
             </div>
           </div>
-
-          <EditToggle
-            isEditing={isEditing}
-            onToggle={(editing) =>
-              editing ? onStartEditing?.() : onStopEditing?.()
-            }
-          />
         </div>
 
         {/* Información del nodo */}
@@ -209,7 +202,7 @@ export default function EditableNode({
       )}
 
       {/* Información de capacidad */}
-      {formData.type !== "sink" && (
+      {formData.type !== "sink" && !isEditing && (
         <div className="px-4 py-3 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Capacity</span>
@@ -232,7 +225,7 @@ export default function EditableNode({
       )}
 
       {/* Slots visuales */}
-      {formData.type !== "sink" && data.slots && data.slots.length > 0 && (
+      {formData.type !== "sink" && data.slots && data.slots.length > 0 && !isEditing && (
         <div className="p-4">
           <div className="text-sm font-medium text-gray-700 mb-3">Slots</div>
           <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -251,7 +244,7 @@ export default function EditableNode({
                 <div className="flex items-center gap-2">
                   <div
                     className={`
-                      w-5 h-5 rounded flex items-center justify-center text-xs font-bold
+                      w-5 h-3 rounded flex items-center justify-center text-xs font-bold
                       ${
                         slot.participantId
                           ? "bg-green-500 text-white"
@@ -272,7 +265,7 @@ export default function EditableNode({
       )}
 
       {/* Información para nodos sink */}
-      {formData.type === "sink" && (
+      {formData.type === "sink" && !isEditing && (
         <div className="p-4">
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
             <div className="text-purple-700 text-sm font-semibold mb-1">
@@ -301,21 +294,25 @@ export default function EditableNode({
       )}
 
       {/* Handles para conexiones */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={isConnectable}
-        className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
-        style={{ left: -6 }}
-      />
-      {formData.type !== "sink" && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          isConnectable={isConnectable}
-          className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
-          style={{ right: -6 }}
-        />
+      {isEditing && (
+        <>
+          <Handle
+            type="target"
+            position={Position.Left}
+            isConnectable={isConnectable}
+            className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
+            style={{ left: -6 }}
+          />
+          {formData.type !== "sink" && (
+            <Handle
+              type="source"
+              position={Position.Right}
+              isConnectable={isConnectable}
+              className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
+              style={{ right: -6 }}
+            />
+          )}
+        </>
       )}
     </div>
   );

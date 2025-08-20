@@ -99,8 +99,6 @@ function GraphNodeCard({ data }: { data: GraphNode }) {
               <span className="text-white text-sm font-bold">
                 {data.type === "match"
                   ? "M"
-                  : data.type === "aggregator"
-                  ? "A"
                   : "S"}
               </span>
             </div>
