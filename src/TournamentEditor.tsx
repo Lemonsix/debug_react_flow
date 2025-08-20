@@ -35,6 +35,7 @@ interface EditableEdgeData extends GraphEdge {
 
 const NODE_W = 400;
 const NODE_H = 280;
+const MIN_DISTANCE = 150; // Distancia mínima para proximity connect
 
 // Tipos de nodos y edges serán definidos dentro del componente
 
@@ -165,6 +166,145 @@ export default function TournamentEditor({
   // Estado para nodos y edges
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+
+  // Proximity Connect: Encontrar el nodo más cercano para conectar automáticamente
+  const getClosestEdge = useCallback((node: Node) => {
+    // Usar nodos directamente en lugar de nodeLookup
+    const draggedNode = nodes.find(n => n.id === node.id);
+    if (!draggedNode) return null;
+
+    const closestNode = nodes.reduce(
+      (res, n) => {
+        if (n.id !== draggedNode.id) {
+          const dx = n.position.x - draggedNode.position.x;
+          const dy = n.position.y - draggedNode.position.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+
+          if (d < res.distance && d < MIN_DISTANCE) {
+            res.distance = d;
+            res.node = n;
+          }
+        }
+
+        return res;
+      },
+      {
+        distance: Number.MAX_VALUE,
+        node: null as Node | null,
+      }
+    );
+
+    if (!closestNode.node) {
+      return null;
+    }
+
+    const closeNodeIsSource = closestNode.node.position.x < draggedNode.position.x;
+
+    return {
+      id: closeNodeIsSource
+        ? `temp-${closestNode.node.id}-${node.id}`
+        : `temp-${node.id}-${closestNode.node.id}`,
+      source: closeNodeIsSource ? closestNode.node.id : node.id,
+      target: closeNodeIsSource ? node.id : closestNode.node.id,
+    };
+  }, [nodes]);
+
+  // Manejar arrastre de nodos para mostrar conexión temporal
+  const onNodeDrag = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      if (!editable) return;
+
+      const closeEdge = getClosestEdge(node);
+
+      setEdges((es) => {
+        const nextEdges = es.filter((e) => e.className !== 'temp');
+
+        if (
+          closeEdge &&
+          !nextEdges.find(
+            (ne) =>
+              ne.source === closeEdge.source && ne.target === closeEdge.target
+          )
+        ) {
+          const tempEdge: Edge = {
+            id: closeEdge.id,
+            source: closeEdge.source,
+            target: closeEdge.target,
+            className: 'temp',
+            style: { stroke: '#3b82f6', strokeDasharray: '5,5', strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
+            data: {
+              id: closeEdge.id,
+              fromNode: closeEdge.source,
+              toNode: closeEdge.target,
+              outcome: "points >= 0",
+              editable: false,
+              condition: {
+                field: "points" as const,
+                operator: ">=" as const,
+                value: 0,
+              },
+            },
+          };
+          nextEdges.push(tempEdge);
+        }
+
+        return nextEdges;
+      });
+    },
+    [editable, getClosestEdge, setEdges]
+  );
+
+  // Finalizar arrastre y crear conexión real si está cerca
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      if (!editable) return;
+
+      const closeEdge = getClosestEdge(node);
+
+      setEdges((es) => {
+        const nextEdges = es.filter((e) => e.className !== 'temp');
+
+        if (
+          closeEdge &&
+          !nextEdges.find(
+            (ne) =>
+              ne.source === closeEdge.source && ne.target === closeEdge.target
+          )
+        ) {
+          const newEdge: Edge = {
+            id: `edge-${Date.now()}`,
+            source: closeEdge.source,
+            target: closeEdge.target,
+            type: "editable",
+            data: {
+              id: `edge-${Date.now()}`,
+              fromNode: closeEdge.source,
+              toNode: closeEdge.target,
+              outcome: "points >= 0",
+              editable: true,
+              condition: {
+                field: "points" as const,
+                operator: ">=" as const,
+                value: 0,
+              },
+            },
+            markerEnd: { type: MarkerType.ArrowClosed },
+          };
+          nextEdges.push(newEdge);
+
+          // Agregar al historial
+          addToHistory("ADD_EDGE", {
+            edgeId: newEdge.id,
+            afterState: newEdge,
+          });
+        }
+
+        return nextEdges;
+      });
+    },
+    [editable, getClosestEdge, setEdges, addToHistory]
+  );
 
   // Función para actualizar condiciones de edges
   const handleEdgeConditionUpdate = useCallback(
@@ -362,6 +502,14 @@ export default function TournamentEditor({
         ...(nodeType === "sink" && {
           sinkConfig: {
             sinkType: "qualification" as const,
+          },
+        }),
+        ...(nodeType === "match" && {
+          matchConfig: {
+            capacity: 2,
+            modality: "presencial" as const,
+            scheduledDate: undefined,
+            scheduledTime: undefined,
           },
         }),
       };
@@ -765,6 +913,10 @@ export default function TournamentEditor({
       nodes: nodes.map((n) => ({
         ...n.data,
         position: n.position,
+        // Asegurar que la configuración de match se incluya
+        ...(n.data.type === "match" && n.data.matchConfig && {
+          matchConfig: n.data.matchConfig,
+        }),
       })),
       edges: edges.map((e) => ({
         ...e.data,
@@ -842,6 +994,8 @@ export default function TournamentEditor({
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={true}
@@ -872,7 +1026,9 @@ export default function TournamentEditor({
                 <span>Selected Node: {selectedNodeId.slice(0, 8)}...</span>
               )}
               {selectedEdgeId && (
-                <span>Selected Edge: {selectedEdgeId.slice(0, 8)}...</span>
+                <span className="text-blue-600 font-medium">
+                  🔗 Selected Edge: {selectedEdgeId.slice(0, 8)}... (Press Delete to remove)
+                </span>
               )}
               {copiedNode && (
                 <span className="text-green-600">📋 Node copied</span>
@@ -886,14 +1042,18 @@ export default function TournamentEditor({
       {editable && (
         <div className="absolute bottom-4 right-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm p-2 text-xs text-blue-700">
           <div>
-            💡 <strong>Keyboard Shortcuts:</strong>
+            💡 <strong>Controls:</strong>
           </div>
           <div>• Click node/edge to select</div>
+          <div>• Drag nodes to move them</div>
+          <div>• Drag near other nodes to auto-connect</div>
+          <div>• Use handles (⚪) to connect manually</div>
+          <div>• Click edges to select (animated dashed lines)</div>
           <div>• Ctrl+C to copy node</div>
           <div>• Ctrl+V to paste node</div>
           <div>• Ctrl+Z to undo</div>
           <div>• Ctrl+Y to redo</div>
-          <div>• Delete key to remove selected</div>
+          <div>• Delete key to remove selected item</div>
         </div>
       )}
     </div>

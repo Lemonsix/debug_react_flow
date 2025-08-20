@@ -127,3 +127,31 @@ body {
   }
 }
 
+/* Animación para edges con líneas punteadas que fluyen */
+@keyframes dash-flow {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 24;
+  }
+}
+
+/* Estilos para edges animados */
+.animated-edge {
+  cursor: pointer;
+}
+
+/* Mejora de visibilidad para edges seleccionados */
+.react-flow__edge.selected .animated-edge {
+  stroke: #ef4444 !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.4));
+}
+
+/* Hover effect para edges */
+.react-flow__edge:hover .animated-edge {
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 4px rgba(99, 102, 241, 0.3));
+}
+

@@ -108,14 +108,29 @@ export default function EditableEdge({
 
   return (
     <>
-      {/* Path del edge */}
+      {/* Invisible larger path for easier clicking */}
+      <BaseEdge
+        path={edgePath}
+        style={{
+          strokeWidth: 20,
+          stroke: "transparent",
+          cursor: "pointer",
+        }}
+      />
+      
+      {/* Visible animated path */}
       <BaseEdge
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          strokeWidth: isEditing ? 2.5 : 1.5,
-          stroke: isEditing ? "#3b82f6" : "#94a3b8",
+          strokeWidth: isEditing ? 3 : 2,
+          stroke: isEditing ? "#3b82f6" : "#6366f1",
+          strokeDasharray: "8 4",
+          strokeDashoffset: "0",
           transition: "all 0.2s",
+          animation: "dash-flow 2s linear infinite",
+          pointerEvents: "none", // Solo el invisible debe recibir clicks
+          cursor: "pointer",
         }}
       />
 
@@ -254,12 +269,28 @@ export function SimpleEdge({
 
   return (
     <>
+      {/* Invisible larger path for easier clicking */}
+      <BaseEdge
+        path={edgePath}
+        style={{
+          strokeWidth: 20,
+          stroke: "transparent",
+          cursor: "pointer",
+        }}
+      />
+      
+      {/* Visible animated path */}
       <BaseEdge
         path={edgePath}
         markerEnd={markerEnd}
         style={{
-          strokeWidth: 1.5,
-          stroke: "#94a3b8",
+          strokeWidth: 2,
+          stroke: "#6366f1",
+          strokeDasharray: "8 4",
+          strokeDashoffset: "0",
+          animation: "dash-flow 2s linear infinite",
+          pointerEvents: "none", // Solo el invisible debe recibir clicks
+          cursor: "pointer",
         }}
       />
 

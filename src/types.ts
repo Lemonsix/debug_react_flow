@@ -1,5 +1,14 @@
 export type NodeType = "match" | "sink";
 
+export type MatchModality = "presencial" | "online";
+
+export type MatchConfiguration = {
+  capacity: number;
+  modality: MatchModality;
+  scheduledDate?: Date;
+  scheduledTime?: string; // formato HH:mm
+};
+
 export type PhaseSink = {
   kind: string;
   podiumPos?: number;
@@ -67,6 +76,7 @@ export type GraphNode = {
   // Nuevas propiedades para edición
   editable?: boolean;
   sinkConfig?: SinkConfiguration;
+  matchConfig?: MatchConfiguration;
   position?: { x: number; y: number };
 };
 

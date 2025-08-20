@@ -3,6 +3,28 @@
 ## Estado Actual
 ✅ **IMPLEMENTACIÓN COMPLETADA** - Todas las funcionalidades principales han sido implementadas exitosamente.
 
+### 🔧 Mejoras Recientes (2024-12-30)
+
+#### ✅ Botón de Edición Arreglado
+Se corrigió un problema donde el botón de edición no aparecía en nodos cuando no estaban en modo edición. El problema era una condición lógica incorrecta que dependía de `data.editable` en lugar de verificar la disponibilidad del callback `onStartEditing`.
+
+#### ✅ Handles de Conexión Siempre Visibles
+Los handles (puntos de conexión) ahora son siempre visibles en los nodos, no solo cuando están en modo edición. Esto facilita la conexión manual de nodos arrastrando desde los handles.
+
+#### ✅ Proximity Connect Implementado
+Se implementó la funcionalidad de [proximity connect de React Flow](https://reactflow.dev/examples/nodes/proximity-connect) que permite:
+- **Conexión Automática**: Al arrastrar un nodo cerca de otro (distancia < 150px), se muestra una línea punteada azul
+- **Creación Automática de Edges**: Al soltar el nodo cerca, se crea automáticamente una conexión entre los nodos
+- **Feedback Visual**: Las conexiones temporales se muestran con línea punteada azul durante el arrastre
+
+#### ✅ Edges Animados y Seleccionables (2024-12-30)
+Se mejoraron significativamente los edges con:
+- **Líneas Animadas Dashed**: Todas las conexiones ahora tienen líneas punteadas animadas que simulan flujo de datos
+- **Mejor Selección**: Área de click más grande (invisible) para facilitar la selección de edges
+- **Eliminación Mejorada**: Edges completamente seleccionables con tecla Delete
+- **Feedback Visual**: Indicadores claros cuando un edge está seleccionado con colores distintivos
+- **Status Bar Mejorado**: Información clara sobre edges seleccionados con instrucciones
+
 ## Funcionalidades Implementadas
 
 ### ✅ Sistema de Tipos Extendido

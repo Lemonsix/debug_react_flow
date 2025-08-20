@@ -5,9 +5,10 @@ import {
   FormField,
   NodeTypeSelector,
   SinkConfigEditor,
-  EditToggle,
+  MatchConfigEditor,
 } from "./FormComponents";
 import { validateNodeForm } from "../utils/validation";
+import type { MatchConfiguration } from "../types";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -32,13 +33,20 @@ export default function EditableNode({
     type: data.type,
     capacity: data.capacity,
     sinkConfig: data.sinkConfig || { sinkType: "qualification" as const },
+    matchConfig: data.matchConfig || { 
+      capacity: data.capacity, 
+      modality: "presencial" as const,
+      scheduledDate: undefined,
+      scheduledTime: undefined
+    },
   });
 
   // Validación del formulario
   const validation = validateNodeForm(
     formData.type,
     formData.capacity,
-    formData.sinkConfig
+    formData.sinkConfig,
+    formData.matchConfig
   );
 
   // Actualizar datos del nodo
@@ -48,7 +56,12 @@ export default function EditableNode({
       setFormData((prev) => ({ ...prev, ...updates }));
 
       if (onChange) {
-        onChange(updates);
+        // Incluir matchConfig en las actualizaciones si es un nodo de match
+        if (field === "matchConfig") {
+          onChange({ ...updates, matchConfig: value as MatchConfiguration });
+        } else {
+          onChange(updates);
+        }
       }
     },
     [onChange]
@@ -74,6 +87,12 @@ export default function EditableNode({
       type: data.type,
       capacity: data.capacity,
       sinkConfig: data.sinkConfig || { sinkType: "qualification" as const },
+      matchConfig: data.matchConfig || { 
+        capacity: data.capacity, 
+        modality: "presencial" as const,
+        scheduledDate: undefined,
+        scheduledTime: undefined
+      },
     });
     // Desactivar la edición automáticamente
     onStopEditing?.();
@@ -106,18 +125,19 @@ export default function EditableNode({
         relative bg-white border-2 ${config.border} rounded-lg shadow-sm
         hover:shadow-md transition-all duration-200
         ${isEditing ? "ring-2 ring-blue-400 ring-opacity-50" : ""}
-        ${isEditing ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}
-        min-w-80 max-w-80
+        ${isEditing ? "cursor-grab active:cursor-grabbing" : formData.type === "match" ? "cursor-default" : "cursor-pointer"}
+        ${formData.type === "match" && !isEditing ? "min-w-32 max-w-32" : "min-w-80 max-w-80"}
       `}
       onClick={() => {
-        if (data.editable && !isEditing && onStartEditing) {
+        // Solo los nodos no-match se pueden editar con clic general
+        if (!isEditing && onStartEditing && formData.type !== "match") {
           onStartEditing();
         }
       }}
     >
       {/* Header del nodo con toggle de edición */}
-      <div className="p-4 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-3">
+      <div className={`${formData.type === "match" && !isEditing ? "p-2" : "p-4"} border-b border-gray-100`}>
+        <div className={`flex items-center ${formData.type === "match" && !isEditing ? "justify-center" : "justify-between"} ${formData.type === "match" && !isEditing ? "" : "mb-3"}`}>
           <div className="flex items-center gap-3">
             <div
               className={`${config.accent} w-8 h-8 rounded-lg flex items-center justify-center`}
@@ -126,52 +146,100 @@ export default function EditableNode({
                 {config.icon}
               </span>
             </div>
-            <div>
-              <div className={`font-semibold text-sm ${config.text}`}>
-                {formData.type.toUpperCase()}
+            {formData.type !== "match" || isEditing ? (
+              <div>
+                <div className={`font-semibold text-sm ${config.text}`}>
+                  {formData.type.toUpperCase()}
+                </div>
+                {formData.type !== "match" && (
+                  <div className="text-xs text-gray-500 font-medium">
+                    ID: {data.id.slice(0, 8)}...
+                  </div>
+                )}
               </div>
-              <div className="text-xs text-gray-500 font-medium">
-                ID: {data.id.slice(0, 8)}...
-              </div>
-            </div>
+            ) : null}
           </div>
+
+          {/* Botón de edición para nodos match */}
+          {formData.type === "match" && !isEditing && onStartEditing && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartEditing?.();
+              }}
+              className="absolute top-1 right-1 w-6 h-6 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <span className="text-xs text-gray-600">✏️</span>
+            </button>
+          )}
         </div>
 
-        {/* Información del nodo */}
-        <div className="bg-gray-50 rounded px-3 py-2 border border-gray-200">
-          <div className="text-xs text-gray-500 mb-1">Node ID</div>
-          <div className="font-mono text-xs text-gray-700 break-all leading-relaxed">
-            {data.id}
+        {/* Información del nodo - solo para nodos que no sean match */}
+        {formData.type !== "match" && (
+          <div className="bg-gray-50 rounded px-3 py-2 border border-gray-200">
+            <div className="text-xs text-gray-500 mb-1">Node ID</div>
+            <div className="font-mono text-xs text-gray-700 break-all leading-relaxed">
+              {data.id}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Información del nodo match cuando no está en edición */}
+        {formData.type === "match" && !isEditing && formData.matchConfig && (
+          <div className="p-2 text-center">
+            <div className="text-xs text-emerald-600 font-medium mb-1">
+              {formData.matchConfig.modality === "presencial" ? "🏟️ Presencial" : "💻 Online"}
+            </div>
+            <div className="text-xs text-emerald-600">
+              {formData.matchConfig.capacity} participantes
+            </div>
+            {formData.matchConfig.scheduledDate && (
+              <div className="text-xs text-emerald-600 mt-1">
+                📅 {formData.matchConfig.scheduledDate.toLocaleDateString()}
+                {formData.matchConfig.scheduledTime && (
+                  <span> 🕐 {formData.matchConfig.scheduledTime}</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Formulario de edición */}
       {isEditing && (
         <div className="p-4 border-b border-gray-100 bg-gray-50">
           <div className="space-y-3">
-            <NodeTypeSelector
-              value={formData.type}
-              onChange={(type) => handleUpdate("type", type)}
-            />
-
-            {formData.type !== "sink" && (
-              <FormField
-                label="Capacity"
-                value={formData.capacity}
-                onChange={(value) => handleUpdate("capacity", value)}
-                type="number"
-                placeholder="Number of slots"
-                required
-                error={validation.errors.capacity}
+            {formData.type === "match" ? (
+              <MatchConfigEditor
+                config={formData.matchConfig}
+                onChange={(config) => handleUpdate("matchConfig", config)}
               />
-            )}
+            ) : (
+              <>
+                <NodeTypeSelector
+                  value={formData.type}
+                  onChange={(type) => handleUpdate("type", type)}
+                />
 
-            {formData.type === "sink" && (
-              <SinkConfigEditor
-                config={formData.sinkConfig}
-                onChange={(config) => handleUpdate("sinkConfig", config)}
-              />
+                {formData.type !== "sink" && (
+                  <FormField
+                    label="Capacity"
+                    value={formData.capacity}
+                    onChange={(value) => handleUpdate("capacity", value)}
+                    type="number"
+                    placeholder="Number of slots"
+                    required
+                    error={validation.errors.capacity}
+                  />
+                )}
+
+                {formData.type === "sink" && (
+                  <SinkConfigEditor
+                    config={formData.sinkConfig}
+                    onChange={(config) => handleUpdate("sinkConfig", config)}
+                  />
+                )}
+              </>
             )}
 
             {/* Botones de acción */}
@@ -202,7 +270,7 @@ export default function EditableNode({
       )}
 
       {/* Información de capacidad */}
-      {formData.type !== "sink" && !isEditing && (
+      {formData.type !== "sink" && formData.type !== "match" && !isEditing && (
         <div className="px-4 py-3 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">Capacity</span>
@@ -225,7 +293,7 @@ export default function EditableNode({
       )}
 
       {/* Slots visuales */}
-      {formData.type !== "sink" && data.slots && data.slots.length > 0 && !isEditing && (
+      {formData.type !== "sink" && formData.type !== "match" && data.slots && data.slots.length > 0 && !isEditing && (
         <div className="p-4">
           <div className="text-sm font-medium text-gray-700 mb-3">Slots</div>
           <div className="space-y-2 max-h-32 overflow-y-auto">
@@ -293,26 +361,22 @@ export default function EditableNode({
         </div>
       )}
 
-      {/* Handles para conexiones */}
-      {isEditing && (
-        <>
-          <Handle
-            type="target"
-            position={Position.Left}
-            isConnectable={isConnectable}
-            className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
-            style={{ left: -6 }}
-          />
-          {formData.type !== "sink" && (
-            <Handle
-              type="source"
-              position={Position.Right}
-              isConnectable={isConnectable}
-              className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
-              style={{ right: -6 }}
-            />
-          )}
-        </>
+      {/* Handles para conexiones - siempre visibles */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={isConnectable}
+        className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
+        style={{ left: -6 }}
+      />
+      {formData.type !== "sink" && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          isConnectable={isConnectable}
+          className="w-3 h-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-colors"
+          style={{ right: -6 }}
+        />
       )}
     </div>
   );

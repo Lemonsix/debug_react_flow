@@ -4,6 +4,8 @@ import type {
   ConditionOperator,
   EdgeCondition,
   SinkConfiguration,
+  MatchModality,
+  MatchConfiguration,
 } from "../types";
 
 // Componente base para inputs con validación
@@ -273,5 +275,82 @@ export function EditToggle({
     >
       {isEditing ? "✓ Editing" : "✏️"}
     </button>
+  );
+}
+
+// Editor de configuración para nodos match
+interface MatchConfigEditorProps {
+  config: MatchConfiguration;
+  onChange: (config: MatchConfiguration) => void;
+}
+
+export function MatchConfigEditor({ config, onChange }: MatchConfigEditorProps) {
+  const modalityOptions = [
+    { value: "presencial", label: "Presencial" },
+    { value: "online", label: "Online" },
+  ];
+
+  const updateConfig = (
+    field: keyof MatchConfiguration,
+    value: string | number | Date
+  ) => {
+    onChange({ ...config, [field]: value });
+  };
+
+  return (
+    <div className="space-y-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+      <h4 className="text-sm font-semibold text-emerald-800">
+        Match Configuration
+      </h4>
+
+      <FormField
+        label="Capacity"
+        value={config.capacity}
+        onChange={(val) => updateConfig("capacity", Number(val))}
+        type="number"
+        placeholder="Number of participants"
+        required
+      />
+
+      <FormField
+        label="Modality"
+        value={config.modality}
+        onChange={(val) => updateConfig("modality", val as MatchModality)}
+        type="select"
+        options={modalityOptions}
+        required
+      />
+
+      <div className="space-y-2">
+        <label className="block text-xs font-medium text-gray-700">
+          Scheduled Date
+        </label>
+        <input
+          type="date"
+          value={config.scheduledDate ? config.scheduledDate.toISOString().split('T')[0] : ''}
+          onChange={(e) => {
+            const date = e.target.value ? new Date(e.target.value) : undefined;
+            if (date) {
+              updateConfig("scheduledDate", date);
+            } else {
+              updateConfig("scheduledDate", undefined as any);
+            }
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-xs font-medium text-gray-700">
+          Scheduled Time
+        </label>
+        <input
+          type="time"
+          value={config.scheduledTime || ''}
+          onChange={(e) => updateConfig("scheduledTime", e.target.value)}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+        />
+      </div>
+    </div>
   );
 }

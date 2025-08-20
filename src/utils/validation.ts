@@ -1,10 +1,11 @@
-import type { NodeType, EdgeCondition, SinkConfiguration } from "../types";
+import type { NodeType, EdgeCondition, SinkConfiguration, MatchConfiguration } from "../types";
 
 // Validación para formularios de nodo
 export function validateNodeForm(
   nodeType: NodeType,
   capacity: number,
-  sinkConfig?: SinkConfiguration
+  sinkConfig?: SinkConfiguration,
+  matchConfig?: MatchConfiguration
 ) {
   const errors: Record<string, string> = {};
 
@@ -33,6 +34,16 @@ export function validateNodeForm(
       (sinkConfig.threshold === undefined || sinkConfig.threshold < 0)
     ) {
       errors.threshold = "Threshold must be 0 or greater";
+    }
+  }
+
+  if (nodeType === "match" && matchConfig) {
+    if (!matchConfig.capacity || matchConfig.capacity < 1) {
+      errors.matchCapacity = "Match capacity must be at least 1";
+    }
+
+    if (!matchConfig.modality) {
+      errors.modality = "Modality is required";
     }
   }
 

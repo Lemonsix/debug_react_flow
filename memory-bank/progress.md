@@ -119,8 +119,34 @@ src/
 - **Performance**: Optimizado para grafos grandes
 - **Mantenibilidad**: Código bien documentado y estructurado
 
+### 🔧 Mejoras Recientes (2024-12-30)
+
+#### ✅ Handles de Conexión Siempre Visibles
+- Los handles (puntos de conexión ⚪) ahora son permanentemente visibles
+- No requiere modo edición para conectar nodos manualmente
+- Mejora significativa en UX para conexiones drag & drop
+
+#### ✅ Proximity Connect Implementado  
+- **Auto-conexión por proximidad**: Arrastrar nodos cerca (< 150px) crea conexiones automáticas
+- **Feedback visual en tiempo real**: Línea punteada azul durante el arrastre
+- **Compatibilidad con historial**: Conexiones automáticas incluidas en undo/redo
+- Basado en el [ejemplo oficial de React Flow](https://reactflow.dev/examples/nodes/proximity-connect)
+
+#### ✅ Botón de Edición Corregido
+- Solucionado problema donde el botón ✏️ no aparecía en nodos
+- Eliminadas dependencias circulares de `data.editable`
+- Todos los tipos de nodos ahora tienen acceso completo a edición
+
+#### ✅ Edges Animados y Seleccionables
+- **Animaciones CSS Fluidas**: Líneas punteadas animadas con efecto de flujo continuo
+- **Área de Selección Ampliada**: Paths invisibles más anchos para facilitar el click
+- **Eliminación Intuitiva**: Selección visual clara + tecla Delete para remover
+- **CSS Keyframes**: Animación `dash-flow` personalizada con `strokeDashoffset`
+- **Feedback de Estado**: Colores distintivos para seleccionado/hover/edición
+
 ### Estado de Testing (Recomendado)
 - ✅ **Manual Testing**: Funcionalidades probadas manualmente
+- ✅ **Proximity Connect**: Testeo completo de conexiones automáticas
 - 🔄 **Unit Tests**: Recomendado para componentes críticos
 - 🔄 **Integration Tests**: Recomendado para flujos complejos
 - 🔄 **E2E Tests**: Recomendado para validación completa
