@@ -155,7 +155,7 @@ export default function EditableEdge({
                       value: Number(e.target.value),
                     })
                   }
-                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-12"
+                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none "
                   placeholder="0"
                 />
               </div>

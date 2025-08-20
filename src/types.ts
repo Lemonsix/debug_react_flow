@@ -97,3 +97,26 @@ export type TournamentGraph = {
     description?: string;
   };
 };
+
+// Tipos para el sistema de historial
+export type HistoryActionType =
+  | "ADD_NODE"
+  | "PASTE_NODE"
+  | "DELETE_NODE"
+  | "EDIT_NODE"
+  | "ADD_EDGE"
+  | "DELETE_EDGE"
+  | "EDIT_EDGE"
+  | "MOVE_NODE";
+
+export type HistoryAction = {
+  id: string;
+  type: HistoryActionType;
+  timestamp: number;
+  data: Record<string, any>;
+};
+
+export type HistoryState = {
+  actions: HistoryAction[];
+  currentIndex: number;
+};

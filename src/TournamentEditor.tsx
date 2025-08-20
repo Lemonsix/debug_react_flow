@@ -13,7 +13,14 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import dagre from "dagre";
-import type { TournamentGraph, GraphNode, NodeType } from "./types";
+import type {
+  TournamentGraph,
+  GraphNode,
+  NodeType,
+  HistoryAction,
+  HistoryActionType,
+  HistoryState,
+} from "./types";
 import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 
@@ -45,6 +52,39 @@ export default function TournamentEditor({
   const [copiedNode, setCopiedNode] = useState<GraphNode | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryState>({
+    actions: [],
+    currentIndex: -1,
+  });
+
+  // Sistema de historial
+  const addToHistory = useCallback(
+    (actionType: HistoryActionType, data: Record<string, any>) => {
+      const action: HistoryAction = {
+        id: `action-${Date.now()}`,
+        type: actionType,
+        timestamp: Date.now(),
+        data,
+      };
+
+      setHistory((prev) => {
+        // Truncar el historial desde el índice actual
+        const newActions = prev.actions.slice(0, prev.currentIndex + 1);
+        newActions.push(action);
+
+        // Mantener solo los últimos 50 actions
+        if (newActions.length > 50) {
+          newActions.shift();
+        }
+
+        return {
+          actions: newActions,
+          currentIndex: newActions.length - 1,
+        };
+      });
+    },
+    []
+  );
 
   // Convertir grafo a formato React Flow
   const { rfNodes, rfEdges } = useMemo(() => {
@@ -134,7 +174,32 @@ export default function TournamentEditor({
       return [...updatedExistingNodes, ...newNodes];
     });
 
-    setEdges(rfEdges);
+    // Solo actualizar edges si realmente cambiaron (no solo por agregar nodos)
+    setEdges((currentEdges) => {
+      // Si no hay edges actuales, usar los nuevos
+      if (currentEdges.length === 0) {
+        return rfEdges;
+      }
+
+      // Si el número de edges cambió, actualizar
+      if (currentEdges.length !== rfEdges.length) {
+        return rfEdges;
+      }
+
+      // Si los IDs de edges son diferentes, actualizar
+      const currentEdgeIds = new Set(currentEdges.map((e) => e.id));
+      const newEdgeIds = new Set(rfEdges.map((e) => e.id));
+      const edgesChanged =
+        currentEdgeIds.size !== newEdgeIds.size ||
+        [...currentEdgeIds].some((id) => !newEdgeIds.has(id));
+
+      if (edgesChanged) {
+        return rfEdges;
+      }
+
+      // Mantener edges actuales si no cambiaron
+      return currentEdges;
+    });
   }, [rfNodes, rfEdges, setNodes, setEdges]);
 
   // Manejar conexiones entre nodos
@@ -163,8 +228,14 @@ export default function TournamentEditor({
       };
 
       setEdges((eds) => addEdge(newEdge, eds));
+
+      // Agregar al historial
+      addToHistory("ADD_EDGE", {
+        edgeId: newEdge.id,
+        afterState: newEdge,
+      });
     },
-    [isEditMode, setEdges]
+    [isEditMode, setEdges, addToHistory]
   );
 
   // Agregar nuevo nodo
@@ -196,18 +267,201 @@ export default function TournamentEditor({
         position: { x: 100, y: 100 },
       };
 
+      // Solo agregar el nodo a React Flow, no actualizar el grafo global hasta export
       setNodes((nds) => [...nds, reactFlowNode]);
 
-      if (onGraphChange) {
-        const updatedGraph = {
-          ...graph,
-          nodes: [...graph.nodes, newNode],
-        };
-        onGraphChange(updatedGraph);
-      }
+      // Agregar al historial
+      addToHistory("ADD_NODE", {
+        nodeId: newId,
+        afterState: reactFlowNode,
+      });
     },
-    [graph, setNodes, onGraphChange]
+    [graph, setNodes, addToHistory]
   );
+
+  // Undo
+  const undo = useCallback(() => {
+    if (history.currentIndex < 0) return;
+
+    const action = history.actions[history.currentIndex];
+
+    switch (action.type) {
+      case "ADD_NODE":
+      case "PASTE_NODE":
+        // Eliminar el nodo agregado
+        if (action.data.nodeId) {
+          setNodes((nds) => nds.filter((n) => n.id !== action.data.nodeId));
+        }
+        break;
+
+      case "DELETE_NODE":
+        // Restaurar el nodo eliminado
+        if (action.data.beforeState) {
+          setNodes((nds) => [...nds, action.data.beforeState as Node]);
+          if (action.data.edgesBeforeState) {
+            setEdges((eds) => [
+              ...eds,
+              ...(action.data.edgesBeforeState as Edge[]),
+            ]);
+          }
+        }
+        break;
+
+      case "EDIT_NODE":
+        // Restaurar estado anterior del nodo
+        if (action.data.nodeId && action.data.beforeState) {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === action.data.nodeId
+                ? { ...n, data: action.data.beforeState as GraphNode }
+                : n
+            )
+          );
+        }
+        break;
+
+      case "ADD_EDGE":
+        // Eliminar el edge agregado
+        if (action.data.edgeId) {
+          setEdges((eds) => eds.filter((e) => e.id !== action.data.edgeId));
+        }
+        break;
+
+      case "DELETE_EDGE":
+        // Restaurar el edge eliminado
+        if (action.data.beforeState) {
+          setEdges((eds) => [...eds, action.data.beforeState as Edge]);
+        }
+        break;
+
+      case "EDIT_EDGE":
+        // Restaurar estado anterior del edge
+        if (action.data.edgeId && action.data.beforeState) {
+          setEdges((eds) =>
+            eds.map((e) =>
+              e.id === action.data.edgeId
+                ? { ...e, data: action.data.beforeState as any }
+                : e
+            )
+          );
+        }
+        break;
+
+      case "MOVE_NODE":
+        // Restaurar posición anterior
+        if (action.data.nodeId && action.data.beforeState) {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === action.data.nodeId
+                ? {
+                    ...n,
+                    position: action.data.beforeState as {
+                      x: number;
+                      y: number;
+                    },
+                  }
+                : n
+            )
+          );
+        }
+        break;
+    }
+
+    setHistory((prev) => ({ ...prev, currentIndex: prev.currentIndex - 1 }));
+  }, [history, setNodes, setEdges]);
+
+  // Redo
+  const redo = useCallback(() => {
+    if (history.currentIndex >= history.actions.length - 1) return;
+
+    const nextIndex = history.currentIndex + 1;
+    const action = history.actions[nextIndex];
+
+    switch (action.type) {
+      case "ADD_NODE":
+      case "PASTE_NODE":
+        // Re-agregar el nodo
+        if (action.data.afterState) {
+          setNodes((nds) => [...nds, action.data.afterState as Node]);
+        }
+        break;
+
+      case "DELETE_NODE":
+        // Re-eliminar el nodo
+        if (action.data.nodeId) {
+          setNodes((nds) => nds.filter((n) => n.id !== action.data.nodeId));
+          if (action.data.edgeIds && Array.isArray(action.data.edgeIds)) {
+            setEdges((eds) =>
+              eds.filter(
+                (e) => !(action.data.edgeIds as string[]).includes(e.id)
+              )
+            );
+          }
+        }
+        break;
+
+      case "EDIT_NODE":
+        // Re-aplicar edición del nodo
+        if (action.data.nodeId && action.data.afterState) {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === action.data.nodeId
+                ? { ...n, data: action.data.afterState as GraphNode }
+                : n
+            )
+          );
+        }
+        break;
+
+      case "ADD_EDGE":
+        // Re-agregar el edge
+        if (action.data.afterState) {
+          setEdges((eds) => [...eds, action.data.afterState as Edge]);
+        }
+        break;
+
+      case "DELETE_EDGE":
+        // Re-eliminar el edge
+        if (action.data.edgeId) {
+          setEdges((eds) => eds.filter((e) => e.id !== action.data.edgeId));
+        }
+        break;
+
+      case "EDIT_EDGE":
+        // Re-aplicar edición del edge
+        if (action.data.edgeId && action.data.afterState) {
+          setEdges((eds) =>
+            eds.map((e) =>
+              e.id === action.data.edgeId
+                ? { ...e, data: action.data.afterState as any }
+                : e
+            )
+          );
+        }
+        break;
+
+      case "MOVE_NODE":
+        // Re-aplicar movimiento
+        if (action.data.nodeId && action.data.afterState) {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === action.data.nodeId
+                ? {
+                    ...n,
+                    position: action.data.afterState as {
+                      x: number;
+                      y: number;
+                    },
+                  }
+                : n
+            )
+          );
+        }
+        break;
+    }
+
+    setHistory((prev) => ({ ...prev, currentIndex: nextIndex }));
+  }, [history, setNodes, setEdges]);
 
   // Resetear layout
   const resetLayout = useCallback(() => {
@@ -281,33 +535,29 @@ export default function TournamentEditor({
         },
       };
 
-      // Solo agregar el nuevo nodo, sin tocar los existentes
+      // Solo agregar el nuevo nodo, sin tocar los existentes ni el grafo global
       setNodes((currentNodes) => [...currentNodes, reactFlowNode]);
 
-      if (onGraphChange) {
-        const updatedGraph = {
-          ...graph,
-          nodes: [...graph.nodes, newNode],
-        };
-        onGraphChange(updatedGraph);
-      }
+      // Agregar al historial
+      addToHistory("PASTE_NODE", {
+        nodeId: newId,
+        afterState: reactFlowNode,
+      });
 
       // Seleccionar el nodo recién pegado
       setSelectedNodeId(newId);
     }
-  }, [
-    copiedNode,
-    isEditMode,
-    setNodes,
-    graph,
-    onGraphChange,
-    nodes,
-    selectedNodeId,
-  ]);
+  }, [copiedNode, isEditMode, setNodes, nodes, selectedNodeId, addToHistory]);
 
   // Eliminar nodo seleccionado
   const deleteSelectedNode = useCallback(() => {
     if (selectedNodeId && isEditMode) {
+      // Guardar estado antes de eliminar
+      const nodeToDelete = nodes.find((n) => n.id === selectedNodeId);
+      const edgesToDelete = edges.filter(
+        (e) => e.source === selectedNodeId || e.target === selectedNodeId
+      );
+
       setNodes((nds) => nds.filter((node) => node.id !== selectedNodeId));
       setEdges((eds) =>
         eds.filter(
@@ -316,37 +566,47 @@ export default function TournamentEditor({
         )
       );
 
-      if (onGraphChange) {
-        const updatedGraph = {
-          ...graph,
-          nodes: graph.nodes.filter((n) => n.id !== selectedNodeId),
-          edges: graph.edges.filter(
-            (e) => e.fromNode !== selectedNodeId && e.toNode !== selectedNodeId
-          ),
-        };
-        onGraphChange(updatedGraph);
+      // Agregar al historial
+      if (nodeToDelete) {
+        addToHistory("DELETE_NODE", {
+          nodeId: selectedNodeId,
+          beforeState: nodeToDelete,
+          edgesBeforeState: edgesToDelete,
+          edgeIds: edgesToDelete.map((e) => e.id),
+        });
       }
 
       setSelectedNodeId(null);
     }
-  }, [selectedNodeId, isEditMode, setNodes, setEdges, graph, onGraphChange]);
+  }, [
+    selectedNodeId,
+    isEditMode,
+    setNodes,
+    setEdges,
+    nodes,
+    edges,
+    addToHistory,
+  ]);
 
   // Eliminar edge seleccionado
   const deleteSelectedEdge = useCallback(() => {
     if (selectedEdgeId && isEditMode) {
+      // Guardar estado antes de eliminar
+      const edgeToDelete = edges.find((e) => e.id === selectedEdgeId);
+
       setEdges((eds) => eds.filter((edge) => edge.id !== selectedEdgeId));
 
-      if (onGraphChange) {
-        const updatedGraph = {
-          ...graph,
-          edges: graph.edges.filter((e) => e.id !== selectedEdgeId),
-        };
-        onGraphChange(updatedGraph);
+      // Agregar al historial
+      if (edgeToDelete) {
+        addToHistory("DELETE_EDGE", {
+          edgeId: selectedEdgeId,
+          beforeState: edgeToDelete,
+        });
       }
 
       setSelectedEdgeId(null);
     }
-  }, [selectedEdgeId, isEditMode, setEdges, graph, onGraphChange]);
+  }, [selectedEdgeId, isEditMode, setEdges, edges, addToHistory]);
 
   // Manejar keyboard shortcuts
   useEffect(() => {
@@ -360,8 +620,14 @@ export default function TournamentEditor({
         } else if (e.key === "v" || e.key === "V") {
           e.preventDefault();
           pasteNode();
+        } else if (e.key === "z" || e.key === "Z") {
+          e.preventDefault();
+          undo();
+        } else if (e.key === "y" || e.key === "Y") {
+          e.preventDefault();
+          redo();
         }
-      } else if (e.key === "Delete" || e.key === "Backspace") {
+      } else if (e.key === "Delete") {
         e.preventDefault();
         if (selectedNodeId) {
           deleteSelectedNode();
@@ -381,17 +647,22 @@ export default function TournamentEditor({
     deleteSelectedEdge,
     selectedNodeId,
     selectedEdgeId,
+    undo,
+    redo,
   ]);
 
   // Exportar configuración
   const exportConfiguration = useCallback(() => {
-    const exportData = {
+    // Construir el grafo actualizado con el estado actual de React Flow
+    const currentGraph = {
       ...graph,
       nodes: nodes.map((n) => ({
         ...n.data,
         position: n.position,
       })),
-      edges: edges.map((e) => e.data),
+      edges: edges.map((e) => ({
+        ...e.data,
+      })),
       metadata: {
         ...graph.metadata,
         lastModified: new Date().toISOString(),
@@ -399,7 +670,12 @@ export default function TournamentEditor({
       },
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+    // Actualizar el grafo global con el estado actual
+    if (onGraphChange) {
+      onGraphChange(currentGraph);
+    }
+
+    const blob = new Blob([JSON.stringify(currentGraph, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -408,7 +684,7 @@ export default function TournamentEditor({
     a.download = `tournament-config-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [graph, nodes, edges]);
+  }, [graph, nodes, edges, onGraphChange]);
 
   return (
     <div className="h-[80vh] w-full rounded-lg border border-gray-200 bg-gray-50 relative">
@@ -506,6 +782,9 @@ export default function TournamentEditor({
           <span>Nodes: {nodes.length}</span>
           <span>Edges: {edges.length}</span>
           <span>Mode: {isEditMode ? "Edit" : "View"}</span>
+          <span>
+            History: {history.currentIndex + 1}/{history.actions.length}
+          </span>
           {graph.esport && <span>Esport: {graph.esport.toUpperCase()}</span>}
           {isEditMode && (
             <>
@@ -532,7 +811,9 @@ export default function TournamentEditor({
           <div>• Click node/edge to select</div>
           <div>• Ctrl+C to copy node</div>
           <div>• Ctrl+V to paste node</div>
-          <div>• Delete to remove selected</div>
+          <div>• Ctrl+Z to undo</div>
+          <div>• Ctrl+Y to redo</div>
+          <div>• Delete key to remove selected</div>
         </div>
       )}
     </div>
