@@ -501,7 +501,8 @@ export default function TournamentEditor({
         position: { x: 100, y: 100 },
         ...(nodeType === "sink" && {
           sinkConfig: {
-            sinkType: "qualification" as const,
+            sinkType: "podium" as const,
+            position: 1,
           },
         }),
         ...(nodeType === "match" && {

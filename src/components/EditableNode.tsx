@@ -32,7 +32,7 @@ export default function EditableNode({
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
-    sinkConfig: data.sinkConfig || { sinkType: "qualification" as const },
+    sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
     matchConfig: data.matchConfig || { 
       capacity: data.capacity, 
       modality: "presencial" as const,
@@ -86,7 +86,7 @@ export default function EditableNode({
     setFormData({
       type: data.type,
       capacity: data.capacity,
-      sinkConfig: data.sinkConfig || { sinkType: "qualification" as const },
+      sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
       matchConfig: data.matchConfig || { 
         capacity: data.capacity, 
         modality: "presencial" as const,
@@ -151,7 +151,7 @@ export default function EditableNode({
                 <div className={`font-semibold text-sm ${config.text}`}>
                   {formData.type.toUpperCase()}
                 </div>
-                {formData.type !== "match" && (
+                {formData.type !== "match" && formData.type !== "sink" && (
                   <div className="text-xs text-gray-500 font-medium">
                     ID: {data.id.slice(0, 8)}...
                   </div>
@@ -174,8 +174,8 @@ export default function EditableNode({
           )}
         </div>
 
-        {/* Información del nodo - solo para nodos que no sean match */}
-        {formData.type !== "match" && (
+        {/* Información del nodo - solo para nodos que no sean match ni sink */}
+        {formData.type !== "match" && formData.type !== "sink" && (
           <div className="bg-gray-50 rounded px-3 py-2 border border-gray-200">
             <div className="text-xs text-gray-500 mb-1">Node ID</div>
             <div className="font-mono text-xs text-gray-700 break-all leading-relaxed">
@@ -214,6 +214,11 @@ export default function EditableNode({
                 config={formData.matchConfig}
                 onChange={(config) => handleUpdate("matchConfig", config)}
               />
+            ) : formData.type === "sink" ? (
+              <SinkConfigEditor
+                config={formData.sinkConfig}
+                onChange={(config) => handleUpdate("sinkConfig", config)}
+              />
             ) : (
               <>
                 <NodeTypeSelector
@@ -221,24 +226,15 @@ export default function EditableNode({
                   onChange={(type) => handleUpdate("type", type)}
                 />
 
-                {formData.type !== "sink" && (
-                  <FormField
-                    label="Capacity"
-                    value={formData.capacity}
-                    onChange={(value) => handleUpdate("capacity", value)}
-                    type="number"
-                    placeholder="Number of slots"
-                    required
-                    error={validation.errors.capacity}
-                  />
-                )}
-
-                {formData.type === "sink" && (
-                  <SinkConfigEditor
-                    config={formData.sinkConfig}
-                    onChange={(config) => handleUpdate("sinkConfig", config)}
-                  />
-                )}
+                <FormField
+                  label="Capacity"
+                  value={formData.capacity}
+                  onChange={(value) => handleUpdate("capacity", value)}
+                  type="number"
+                  placeholder="Number of slots"
+                  required
+                  error={validation.errors.capacity}
+                />
               </>
             )}
 
@@ -337,24 +333,14 @@ export default function EditableNode({
         <div className="p-4">
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
             <div className="text-purple-700 text-sm font-semibold mb-1">
-              🏆 {formData.sinkConfig?.sinkType || "Final Result"}
+              {formData.sinkConfig?.sinkType === "podium" ? "🏆 Podio" : 
+               formData.sinkConfig?.sinkType === "disqualification" ? "❌ Eliminación" : 
+               "🏁 Resultado Final"}
             </div>
             {formData.sinkConfig?.sinkType === "podium" &&
               formData.sinkConfig.position && (
                 <div className="text-purple-600 text-xs">
-                  Position #{formData.sinkConfig.position}
-                </div>
-              )}
-            {formData.sinkConfig?.sinkType === "qualification" &&
-              formData.sinkConfig.threshold !== undefined && (
-                <div className="text-purple-600 text-xs">
-                  Threshold: {formData.sinkConfig.threshold} points
-                </div>
-              )}
-            {formData.sinkConfig?.sinkType === "disqualification" &&
-              formData.sinkConfig.reason && (
-                <div className="text-purple-600 text-xs">
-                  Reason: {formData.sinkConfig.reason}
+                  Posición #{formData.sinkConfig.position}
                 </div>
               )}
           </div>

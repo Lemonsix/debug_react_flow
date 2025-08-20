@@ -25,6 +25,15 @@ Se mejoraron significativamente los edges con:
 - **Feedback Visual**: Indicadores claros cuando un edge está seleccionado con colores distintivos
 - **Status Bar Mejorado**: Información clara sobre edges seleccionados con instrucciones
 
+#### ✅ Nodos Sink Simplificados (2024-12-30)
+Se rediseñó completamente la interfaz de nodos Sink para mayor simplicidad:
+- **Sin Selección de Tipo**: Elimina NodeTypeSelector ya que el tipo está fijo como "sink"
+- **ID Oculto**: No muestra información de ID del nodo para interface más limpia
+- **Solo Dos Opciones**: Tipos disponibles limitados a "Podio" y "Eliminación"
+- **Campo de Posición**: Para tipo "Podio" incluye selector numérico de posición (1-10)
+- **Interface Simplificada**: Para tipo "Eliminación" no requiere campos adicionales
+- **Mejor UX**: Etiquetas en español y configuración más intuitiva
+
 ## Funcionalidades Implementadas
 
 ### ✅ Sistema de Tipos Extendido

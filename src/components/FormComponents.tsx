@@ -110,9 +110,8 @@ interface SinkConfigEditorProps {
 
 export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
   const sinkTypeOptions = [
-    { value: "disqualification", label: "Disqualification" },
-    { value: "qualification", label: "Qualification" },
-    { value: "podium", label: "Podium" },
+    { value: "podium", label: "Podio" },
+    { value: "disqualification", label: "Eliminación" },
   ];
 
   const updateConfig = (
@@ -125,11 +124,11 @@ export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
   return (
     <div className="space-y-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
       <h4 className="text-sm font-semibold text-purple-800">
-        Sink Configuration
+        Configuración de Resultado Final
       </h4>
 
       <FormField
-        label="Sink Type"
+        label="Tipo de Resultado"
         value={config.sinkType}
         onChange={(val) => updateConfig("sinkType", val as SinkType)}
         type="select"
@@ -139,31 +138,11 @@ export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
 
       {config.sinkType === "podium" && (
         <FormField
-          label="Position"
+          label="Posición"
           value={config.position || 1}
           onChange={(val) => updateConfig("position", Number(val))}
           type="number"
           placeholder="1, 2, 3..."
-        />
-      )}
-
-      {config.sinkType === "disqualification" && (
-        <FormField
-          label="Reason"
-          value={config.reason || ""}
-          onChange={(val) => updateConfig("reason", String(val))}
-          type="text"
-          placeholder="Disqualification reason"
-        />
-      )}
-
-      {config.sinkType === "qualification" && (
-        <FormField
-          label="Threshold"
-          value={config.threshold || 0}
-          onChange={(val) => updateConfig("threshold", Number(val))}
-          type="number"
-          placeholder="Minimum score required"
         />
       )}
     </div>

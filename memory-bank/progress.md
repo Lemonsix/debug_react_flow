@@ -144,6 +144,14 @@ src/
 - **CSS Keyframes**: Animación `dash-flow` personalizada con `strokeDashoffset`
 - **Feedback de Estado**: Colores distintivos para seleccionado/hover/edición
 
+#### ✅ Rediseño de Nodos Sink
+- **Interface Simplificada**: Eliminación de NodeTypeSelector para nodos sink
+- **Información Limpia**: ID del nodo oculto para mejor presentación visual
+- **Opciones Reducidas**: Solo "Podio" y "Eliminación" disponibles (eliminada "Qualification")
+- **Localización Español**: Etiquetas traducidas - "Podio", "Eliminación", "Posición"
+- **Validación Optimizada**: Campo posición solo para tipo podio con rango 1-10
+- **Configuración por Defecto**: Nuevos nodos sink inician como "podium" posición 1
+
 ### Estado de Testing (Recomendado)
 - ✅ **Manual Testing**: Funcionalidades probadas manualmente
 - ✅ **Proximity Connect**: Testeo completo de conexiones automáticas

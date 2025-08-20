@@ -29,12 +29,7 @@ export function validateNodeForm(
       errors.position = "Position must be at least 1";
     }
 
-    if (
-      sinkConfig.sinkType === "qualification" &&
-      (sinkConfig.threshold === undefined || sinkConfig.threshold < 0)
-    ) {
-      errors.threshold = "Threshold must be 0 or greater";
-    }
+    // Validación removida para qualification ya que no está disponible
   }
 
   if (nodeType === "match" && matchConfig) {
