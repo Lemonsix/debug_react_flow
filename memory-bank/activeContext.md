@@ -20,9 +20,11 @@ Se implementó la funcionalidad de [proximity connect de React Flow](https://rea
 #### ✅ Edges Animados y Seleccionables (2024-12-30)
 Se mejoraron significativamente los edges con:
 - **Líneas Animadas Dashed**: Todas las conexiones ahora tienen líneas punteadas animadas que simulan flujo de datos
+- **Dirección Correcta**: Animación fluye de source a target (izquierda a derecha) como grafos dirigidos
+- **Selección Clara**: Edges seleccionados se muestran como línea negra sólida SIN animación
 - **Mejor Selección**: Área de click más grande (invisible) para facilitar la selección de edges
 - **Eliminación Mejorada**: Edges completamente seleccionables con tecla Delete
-- **Feedback Visual**: Indicadores claros cuando un edge está seleccionado con colores distintivos
+- **Feedback Visual**: Estados distintivos (animado/sólido) según selección
 - **Status Bar Mejorado**: Información clara sobre edges seleccionados con instrucciones
 
 #### ✅ Nodos Sink Simplificados (2024-12-30)
