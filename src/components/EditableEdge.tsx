@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -38,6 +38,13 @@ export default function EditableEdge({
     }
   );
 
+  // Sincronizar estado local cuando cambien los datos del parent
+  useEffect(() => {
+    if (data?.condition && !isEditing) {
+      setCondition(data.condition);
+    }
+  }, [data?.condition, isEditing]);
+
   // Calcular path del edge
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -53,14 +60,23 @@ export default function EditableEdge({
 
   // Manejar guardado de condición
   const handleSave = useCallback(() => {
-    if (!validation.isValid) return;
-
-    // Actualizar el edge en el estado global
-    if (onConditionUpdate && id) {
-      onConditionUpdate(id, condition);
+    if (!validation.isValid) {
+      console.warn("Validation failed:", validation);
+      return;
     }
-    setIsEditing(false);
-  }, [condition, validation.isValid, onConditionUpdate, id]);
+
+    try {
+      // Actualizar el edge en el estado global
+      if (onConditionUpdate && id) {
+        onConditionUpdate(id, condition);
+      }
+
+      // Cerrar la edición inmediatamente
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving condition:", error);
+    }
+  }, [condition, validation, onConditionUpdate, id]);
 
   // Cancelar edición
   const handleCancel = useCallback(() => {
@@ -76,8 +92,10 @@ export default function EditableEdge({
 
   // Generar label para mostrar la condición
   const getConditionLabel = () => {
-    if (data?.condition) {
-      return `${data.condition.field} ${data.condition.operator} ${data.condition.value}`;
+    // Usar el estado local actual en lugar de data?.condition para evitar retrasos
+    const currentCondition = data?.condition || condition;
+    if (currentCondition) {
+      return `${currentCondition.field} ${currentCondition.operator} ${currentCondition.value}`;
     }
     return data?.outcome || "";
   };
@@ -177,11 +195,18 @@ export default function EditableEdge({
                     px-1.5 py-0.5 text-xs rounded transition-colors
                     ${
                       validation.isValid
-                        ? "bg-green-600 text-white hover:bg-green-700"
+                        ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }
                   `}
-                  title="Save"
+                  title={
+                    validation.isValid
+                      ? "Save"
+                      : `Error: ${
+                          Object.values(validation.errors).join(", ") ||
+                          "Invalid condition"
+                        }`
+                  }
                 >
                   ✓
                 </button>
