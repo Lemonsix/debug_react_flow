@@ -104,9 +104,36 @@ export default function TournamentEditor({
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
 
-  // Actualizar cuando el grafo cambie
+  // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
   useMemo(() => {
-    setNodes(rfNodes);
+    // Solo actualizar si es la primera carga o si el número de nodos cambió significativamente
+    setNodes((currentNodes) => {
+      // Si no hay nodos actuales, usar los nuevos
+      if (currentNodes.length === 0) {
+        return rfNodes;
+      }
+
+      // Si se agregaron nodos nuevos, mezclar manteniendo posiciones existentes
+      const existingNodeIds = new Set(currentNodes.map((n) => n.id));
+      const newNodes = rfNodes.filter((n) => !existingNodeIds.has(n.id));
+
+      // Actualizar datos de nodos existentes pero mantener posiciones
+      const updatedExistingNodes = currentNodes
+        .map((currentNode) => {
+          const rfNode = rfNodes.find((n) => n.id === currentNode.id);
+          if (rfNode) {
+            return {
+              ...rfNode,
+              position: currentNode.position, // Mantener posición actual
+            };
+          }
+          return currentNode;
+        })
+        .filter((node) => rfNodes.some((n) => n.id === node.id)); // Solo mantener nodos que aún existen
+
+      return [...updatedExistingNodes, ...newNodes];
+    });
+
     setEdges(rfEdges);
   }, [rfNodes, rfEdges, setNodes, setEdges]);
 
@@ -223,12 +250,18 @@ export default function TournamentEditor({
   const pasteNode = useCallback(() => {
     if (copiedNode && isEditMode) {
       const newId = `node-${Date.now()}`;
+
+      // Calcular posición basada en la posición actual del nodo en React Flow, no en los datos del grafo
+      const currentSelectedNode = nodes.find((n) => n.id === selectedNodeId);
+      const basePosition = currentSelectedNode?.position ||
+        copiedNode.position || { x: 100, y: 100 };
+
       const newNode: GraphNode = {
         ...copiedNode,
         id: newId,
         position: {
-          x: (copiedNode.position?.x || 0) + 50,
-          y: (copiedNode.position?.y || 0) + 50,
+          x: basePosition.x + 50,
+          y: basePosition.y + 50,
         },
         slots: copiedNode.slots.map((slot) => ({
           ...slot,
@@ -242,10 +275,14 @@ export default function TournamentEditor({
         id: newId,
         type: "editable",
         data: newNode,
-        position: newNode.position || { x: 150, y: 150 },
+        position: {
+          x: basePosition.x + 50,
+          y: basePosition.y + 50,
+        },
       };
 
-      setNodes((nds) => [...nds, reactFlowNode]);
+      // Solo agregar el nuevo nodo, sin tocar los existentes
+      setNodes((currentNodes) => [...currentNodes, reactFlowNode]);
 
       if (onGraphChange) {
         const updatedGraph = {
@@ -254,8 +291,19 @@ export default function TournamentEditor({
         };
         onGraphChange(updatedGraph);
       }
+
+      // Seleccionar el nodo recién pegado
+      setSelectedNodeId(newId);
     }
-  }, [copiedNode, isEditMode, setNodes, graph, onGraphChange]);
+  }, [
+    copiedNode,
+    isEditMode,
+    setNodes,
+    graph,
+    onGraphChange,
+    nodes,
+    selectedNodeId,
+  ]);
 
   // Eliminar nodo seleccionado
   const deleteSelectedNode = useCallback(() => {

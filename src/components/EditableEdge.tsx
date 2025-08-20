@@ -110,9 +110,9 @@ export default function EditableEdge({
               />
             </div>
           ) : (
-            // Editor compacto de condición
-            <div className="bg-white border-2 border-blue-400 rounded-lg p-3 shadow-lg min-w-72">
-              <div className="grid grid-cols-3 gap-2 mb-3">
+            // Editor súper compacto de condición
+            <div className="bg-white border-2 border-blue-400 rounded p-2 shadow-lg min-w-fit">
+              <div className="flex gap-1 mb-2">
                 <select
                   value={condition.field}
                   onChange={(e) =>
@@ -121,7 +121,7 @@ export default function EditableEdge({
                       field: e.target.value as "points" | "position" | "score",
                     })
                   }
-                  className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-16"
                 >
                   <option value="points">Points</option>
                   <option value="position">Position</option>
@@ -136,10 +136,10 @@ export default function EditableEdge({
                       operator: e.target.value as ConditionOperator,
                     })
                   }
-                  className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10"
                 >
-                  <option value=">=">&gt;=</option>
-                  <option value="<=">&lt;=</option>
+                  <option value=">=">&ge;</option>
+                  <option value="<=">&le;</option>
                   <option value="==">=</option>
                   <option value="!=">≠</option>
                   <option value=">">&gt;</option>
@@ -155,18 +155,18 @@ export default function EditableEdge({
                       value: Number(e.target.value),
                     })
                   }
-                  className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-12"
                   placeholder="0"
                 />
               </div>
 
-              {/* Botones compactos con iconos */}
-              <div className="flex gap-1 justify-center">
+              {/* Botones mini */}
+              <div className="flex gap-0.5 justify-center">
                 <button
                   onClick={handleSave}
                   disabled={!validation.isValid}
                   className={`
-                    px-2 py-1 text-xs rounded transition-colors
+                    px-1.5 py-0.5 text-xs rounded transition-colors
                     ${
                       validation.isValid
                         ? "bg-green-600 text-white hover:bg-green-700"
@@ -179,7 +179,7 @@ export default function EditableEdge({
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="px-2 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-1.5 py-0.5 text-xs text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                   title="Cancel"
                 >
                   ✕
