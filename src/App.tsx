@@ -1,13 +1,32 @@
 import { useState } from "react";
 import TournamentEditor from "./TournamentEditor";
 import TournamentGraphView from "./TournamentGraphView";
-import { sampleGraph } from "./data.sample";
 import type { TournamentGraph } from "./types";
 import "@xyflow/react/dist/style.css";
 
+// Función para generar un grafo inicial vacío
+function createInitialGraph(): TournamentGraph {
+  return {
+    version: 1,
+    tournamentId: `tournament-${Date.now()}`,
+    phaseId: `phase-${Date.now()}`,
+    esport: "cs2",
+    nodes: [],
+    edges: [],
+    editable: true,
+    metadata: {
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      author: "Tournament Designer",
+      description: "New tournament configuration",
+    },
+  };
+}
+
 export default function App() {
-  const [currentGraph, setCurrentGraph] =
-    useState<TournamentGraph>(sampleGraph);
+  const [currentGraph, setCurrentGraph] = useState<TournamentGraph>(
+    createInitialGraph()
+  );
   const [useEditor, setUseEditor] = useState(true);
 
   const handleGraphChange = (updatedGraph: TournamentGraph) => {

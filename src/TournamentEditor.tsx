@@ -44,6 +44,7 @@ export default function TournamentEditor({
   const [isEditMode, setIsEditMode] = useState(editable);
   const [copiedNode, setCopiedNode] = useState<GraphNode | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
   // Convertir grafo a formato React Flow
   const { rfNodes, rfEdges } = useMemo(() => {
@@ -191,6 +192,18 @@ export default function TournamentEditor({
     (_event: React.MouseEvent, node: Node) => {
       if (isEditMode) {
         setSelectedNodeId(node.id);
+        setSelectedEdgeId(null); // Deseleccionar edge si se selecciona nodo
+      }
+    },
+    [isEditMode]
+  );
+
+  // Manejar selección de edges
+  const onEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+      if (isEditMode) {
+        setSelectedEdgeId(edge.id);
+        setSelectedNodeId(null); // Deseleccionar nodo si se selecciona edge
       }
     },
     [isEditMode]
@@ -244,6 +257,49 @@ export default function TournamentEditor({
     }
   }, [copiedNode, isEditMode, setNodes, graph, onGraphChange]);
 
+  // Eliminar nodo seleccionado
+  const deleteSelectedNode = useCallback(() => {
+    if (selectedNodeId && isEditMode) {
+      setNodes((nds) => nds.filter((node) => node.id !== selectedNodeId));
+      setEdges((eds) =>
+        eds.filter(
+          (edge) =>
+            edge.source !== selectedNodeId && edge.target !== selectedNodeId
+        )
+      );
+
+      if (onGraphChange) {
+        const updatedGraph = {
+          ...graph,
+          nodes: graph.nodes.filter((n) => n.id !== selectedNodeId),
+          edges: graph.edges.filter(
+            (e) => e.fromNode !== selectedNodeId && e.toNode !== selectedNodeId
+          ),
+        };
+        onGraphChange(updatedGraph);
+      }
+
+      setSelectedNodeId(null);
+    }
+  }, [selectedNodeId, isEditMode, setNodes, setEdges, graph, onGraphChange]);
+
+  // Eliminar edge seleccionado
+  const deleteSelectedEdge = useCallback(() => {
+    if (selectedEdgeId && isEditMode) {
+      setEdges((eds) => eds.filter((edge) => edge.id !== selectedEdgeId));
+
+      if (onGraphChange) {
+        const updatedGraph = {
+          ...graph,
+          edges: graph.edges.filter((e) => e.id !== selectedEdgeId),
+        };
+        onGraphChange(updatedGraph);
+      }
+
+      setSelectedEdgeId(null);
+    }
+  }, [selectedEdgeId, isEditMode, setEdges, graph, onGraphChange]);
+
   // Manejar keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -257,12 +313,27 @@ export default function TournamentEditor({
           e.preventDefault();
           pasteNode();
         }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        if (selectedNodeId) {
+          deleteSelectedNode();
+        } else if (selectedEdgeId) {
+          deleteSelectedEdge();
+        }
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isEditMode, copySelectedNode, pasteNode]);
+  }, [
+    isEditMode,
+    copySelectedNode,
+    pasteNode,
+    deleteSelectedNode,
+    deleteSelectedEdge,
+    selectedNodeId,
+    selectedEdgeId,
+  ]);
 
   // Exportar configuración
   const exportConfiguration = useCallback(() => {
@@ -366,6 +437,7 @@ export default function TournamentEditor({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={true}
@@ -390,7 +462,10 @@ export default function TournamentEditor({
           {isEditMode && (
             <>
               {selectedNodeId && (
-                <span>Selected: {selectedNodeId.slice(0, 8)}...</span>
+                <span>Selected Node: {selectedNodeId.slice(0, 8)}...</span>
+              )}
+              {selectedEdgeId && (
+                <span>Selected Edge: {selectedEdgeId.slice(0, 8)}...</span>
               )}
               {copiedNode && (
                 <span className="text-green-600">📋 Node copied</span>
@@ -400,14 +475,16 @@ export default function TournamentEditor({
         </div>
       </div>
 
-      {/* Help text for copy/paste */}
+      {/* Help text for shortcuts */}
       {isEditMode && (
         <div className="absolute bottom-4 right-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm p-2 text-xs text-blue-700">
           <div>
-            💡 <strong>Copy/Paste:</strong>
+            💡 <strong>Keyboard Shortcuts:</strong>
           </div>
-          <div>• Click node → Ctrl+C to copy</div>
-          <div>• Ctrl+V to paste</div>
+          <div>• Click node/edge to select</div>
+          <div>• Ctrl+C to copy node</div>
+          <div>• Ctrl+V to paste node</div>
+          <div>• Delete to remove selected</div>
         </div>
       )}
     </div>

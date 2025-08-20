@@ -109,7 +109,7 @@ function GraphNodeCard({ data }: { data: GraphNode }) {
                 {data.type.toUpperCase()}
               </div>
               <div className="text-xs text-gray-500 font-medium">
-                {data.esport.toUpperCase()}
+                ID: {data.id.slice(0, 8)}...
               </div>
             </div>
           </div>
