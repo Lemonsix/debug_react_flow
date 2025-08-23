@@ -4,16 +4,17 @@ import {
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
-} from "reactflow";
+} from "@xyflow/react";
 import type { GraphEdge, EdgeCondition, ConditionOperator } from "../types";
 import { EditToggle } from "./FormComponents";
 import { validateEdgeCondition } from "../utils/validation";
 
 interface EditableEdgeData extends GraphEdge {
   label?: string;
+  [key: string]: unknown; // Añadir index signature para compatibilidad con React Flow
 }
 
-interface EditableEdgeProps extends EdgeProps<EditableEdgeData> {
+interface EditableEdgeProps extends EdgeProps {
   onConditionUpdate?: (edgeId: string, condition: EdgeCondition) => void;
   isEditing?: boolean;
   onStartEditing?: () => void;
@@ -38,8 +39,9 @@ export default function EditableEdge({
   // Usar el estado global de edición en lugar del local
   const isEditing = globalIsEditing;
 
+  const edgeData = data as EditableEdgeData;
   const [condition, setCondition] = useState<EdgeCondition>(
-    data?.condition || {
+    edgeData?.condition || {
       field: "points",
       operator: ">=",
       value: 0,
@@ -48,10 +50,10 @@ export default function EditableEdge({
 
   // Sincronizar estado local cuando cambien los datos del parent
   useEffect(() => {
-    if (data?.condition && !isEditing) {
-      setCondition(data.condition);
+    if (edgeData?.condition && !isEditing) {
+      setCondition(edgeData.condition);
     }
-  }, [data?.condition, isEditing]);
+  }, [edgeData?.condition, isEditing]);
 
   // Calcular path del edge
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -87,23 +89,23 @@ export default function EditableEdge({
   // Cancelar edición
   const handleCancel = useCallback(() => {
     setCondition(
-      data?.condition || {
+      edgeData?.condition || {
         field: "points",
         operator: ">=",
         value: 0,
       }
     );
     onStopEditing?.();
-  }, [data?.condition, onStopEditing]);
+  }, [edgeData?.condition, onStopEditing]);
 
   // Generar label para mostrar la condición
   const getConditionLabel = () => {
-    // Usar el estado local actual en lugar de data?.condition para evitar retrasos
-    const currentCondition = data?.condition || condition;
+    // Usar el estado local actual en lugar de edgeData?.condition para evitar retrasos
+    const currentCondition = edgeData?.condition || condition;
     if (currentCondition) {
       return `${currentCondition.field} ${currentCondition.operator} ${currentCondition.value}`;
     }
-    return data?.outcome || "";
+    return edgeData?.outcome || "";
   };
 
   return (
@@ -117,7 +119,7 @@ export default function EditableEdge({
           cursor: "pointer",
         }}
       />
-      
+
       {/* Visible animated path */}
       <BaseEdge
         path={edgePath}
@@ -257,7 +259,7 @@ export function SimpleEdge({
   targetPosition,
   data,
   markerEnd,
-}: EdgeProps<EditableEdgeData>) {
+}: EdgeProps) {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -278,7 +280,7 @@ export function SimpleEdge({
           cursor: "pointer",
         }}
       />
-      
+
       {/* Visible animated path */}
       <BaseEdge
         path={edgePath}
@@ -294,7 +296,7 @@ export function SimpleEdge({
         }}
       />
 
-      {data?.label && (
+      {(data as EditableEdgeData)?.label && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -305,7 +307,7 @@ export function SimpleEdge({
             }}
             className="nodrag nopan bg-white border border-gray-200 rounded px-2 py-1 text-gray-600 font-medium"
           >
-            {data.label}
+            {(data as EditableEdgeData).label}
           </div>
         </EdgeLabelRenderer>
       )}

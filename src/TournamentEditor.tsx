@@ -1,5 +1,7 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
@@ -12,9 +14,14 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   type Connection,
-} from "reactflow";
-import "reactflow/dist/style.css";
-import dagre from "dagre";
+  useReactFlow,
+  getNodesBounds,
+  getViewportForBounds,
+  type NodeChange,
+  type EdgeChange,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
 import type {
   TournamentGraph,
   GraphNode,
@@ -28,11 +35,6 @@ import type {
 import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 
-// Tipo local para edges editables
-interface EditableEdgeData extends GraphEdge {
-  label?: string;
-}
-
 const NODE_W = 400;
 const NODE_H = 280;
 const MIN_DISTANCE = 150; // Distancia mínima para proximity connect
@@ -45,11 +47,13 @@ interface TournamentEditorProps {
   onGraphChange?: (graph: TournamentGraph) => void;
 }
 
-export default function TournamentEditor({
+// Componente interno que usa useReactFlow
+function TournamentEditorInternal({
   graph,
   editable = true,
   onGraphChange,
 }: TournamentEditorProps) {
+  const reactFlowInstance = useReactFlow();
   const [copiedNode, setCopiedNode] = useState<GraphNode | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -113,7 +117,7 @@ export default function TournamentEditor({
   const { rfNodes, rfEdges } = useMemo(() => {
     const rfNodes: Node[] = graph.nodes.map((n) => ({
       id: n.id,
-      type: editable ? "editable" : "default",
+      type: editable ? "editable" : "readonly",
       data: { ...n, editable },
       position: n.position || { x: 0, y: 0 },
     }));
@@ -132,82 +136,116 @@ export default function TournamentEditor({
         })
       );
 
-    // Aplicar layout con Dagre si no hay posiciones
+    // Aplicar layout automático si no hay posiciones
     if (
       rfNodes.some(
         (n) => !n.position || (n.position.x === 0 && n.position.y === 0)
       )
     ) {
-      const g = new dagre.graphlib.Graph();
-      g.setGraph({
-        rankdir: "LR",
-        nodesep: 80,
-        ranksep: 150,
-        marginx: 60,
-        marginy: 60,
-      });
-      g.setDefaultEdgeLabel(() => ({}));
+      // Layout optimizado usando las mejores prácticas de React Flow
+      rfNodes.forEach((node, index) => {
+        if (
+          !node.position ||
+          (node.position.x === 0 && node.position.y === 0)
+        ) {
+          // Organizar en filas de máximo 4 nodos
+          const nodesPerRow = 4;
+          const row = Math.floor(index / nodesPerRow);
+          const col = index % nodesPerRow;
 
-      rfNodes.forEach((n) =>
-        g.setNode(n.id, { width: NODE_W, height: NODE_H })
-      );
-      rfEdges.forEach((e) => g.setEdge(e.source, e.target));
-      dagre.layout(g);
-
-      rfNodes.forEach((n) => {
-        const p = g.node(n.id);
-        n.position = { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 };
+          node.position = {
+            x: col * (NODE_W + 120), // Más espaciado horizontal
+            y: row * (NODE_H + 100), // Más espaciado vertical
+          };
+        }
       });
     }
 
     return { rfNodes, rfEdges };
   }, [graph, editable]);
 
-  // Estado para nodos y edges
+  // Estado para nodos y edges con manejo optimizado
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
 
-  // Proximity Connect: Encontrar el nodo más cercano para conectar automáticamente
-  const getClosestEdge = useCallback((node: Node) => {
-    // Usar nodos directamente en lugar de nodeLookup
-    const draggedNode = nodes.find(n => n.id === node.id);
-    if (!draggedNode) return null;
+  // Manejadores optimizados para cambios de nodos y edges
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      // Filtrar cambios de posición para el historial
+      const positionChanges = changes.filter(
+        (change) => change.type === "position" && change.dragging === false
+      );
 
-    const closestNode = nodes.reduce(
-      (res, n) => {
-        if (n.id !== draggedNode.id) {
-          const dx = n.position.x - draggedNode.position.x;
-          const dy = n.position.y - draggedNode.position.y;
-          const d = Math.sqrt(dx * dx + dy * dy);
+      // Aplicar cambios usando la utilidad de React Flow
+      onNodesChange(changes);
 
-          if (d < res.distance && d < MIN_DISTANCE) {
-            res.distance = d;
-            res.node = n;
-          }
+      // Agregar cambios de posición al historial solo cuando termina el drag
+      positionChanges.forEach((change) => {
+        if (change.type === "position" && change.position) {
+          addToHistory("MOVE_NODE", {
+            nodeId: change.id,
+            beforeState: nodes.find((n) => n.id === change.id)?.position,
+            afterState: change.position,
+          });
         }
+      });
+    },
+    [onNodesChange, nodes, addToHistory]
+  );
 
-        return res;
-      },
-      {
-        distance: Number.MAX_VALUE,
-        node: null as Node | null,
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      // Aplicar cambios usando la utilidad de React Flow
+      onEdgesChange(changes);
+    },
+    [onEdgesChange]
+  );
+
+  // Proximity Connect: Encontrar el nodo más cercano para conectar automáticamente
+  const getClosestEdge = useCallback(
+    (node: Node) => {
+      // Usar nodos directamente en lugar de nodeLookup
+      const draggedNode = nodes.find((n) => n.id === node.id);
+      if (!draggedNode) return null;
+
+      const closestNode = nodes.reduce(
+        (res, n) => {
+          if (n.id !== draggedNode.id) {
+            const dx = n.position.x - draggedNode.position.x;
+            const dy = n.position.y - draggedNode.position.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+
+            if (d < res.distance && d < MIN_DISTANCE) {
+              res.distance = d;
+              res.node = n;
+            }
+          }
+
+          return res;
+        },
+        {
+          distance: Number.MAX_VALUE,
+          node: null as Node | null,
+        }
+      );
+
+      if (!closestNode.node) {
+        return null;
       }
-    );
 
-    if (!closestNode.node) {
-      return null;
-    }
+      const closeNodeIsSource =
+        closestNode.node.position.x < draggedNode.position.x;
 
-    const closeNodeIsSource = closestNode.node.position.x < draggedNode.position.x;
-
-    return {
-      id: closeNodeIsSource
-        ? `temp-${closestNode.node.id}-${node.id}`
-        : `temp-${node.id}-${closestNode.node.id}`,
-      source: closeNodeIsSource ? closestNode.node.id : node.id,
-      target: closeNodeIsSource ? node.id : closestNode.node.id,
-    };
-  }, [nodes]);
+      return {
+        id: closeNodeIsSource
+          ? `temp-${closestNode.node.id}-${node.id}`
+          : `temp-${node.id}-${closestNode.node.id}`,
+        source: closeNodeIsSource ? closestNode.node.id : node.id,
+        target: closeNodeIsSource ? node.id : closestNode.node.id,
+      };
+    },
+    [nodes]
+  );
 
   // Manejar arrastre de nodos para mostrar conexión temporal
   const onNodeDrag = useCallback(
@@ -217,7 +255,7 @@ export default function TournamentEditor({
       const closeEdge = getClosestEdge(node);
 
       setEdges((es) => {
-        const nextEdges = es.filter((e) => e.className !== 'temp');
+        const nextEdges = es.filter((e) => e.className !== "temp");
 
         if (
           closeEdge &&
@@ -230,9 +268,13 @@ export default function TournamentEditor({
             id: closeEdge.id,
             source: closeEdge.source,
             target: closeEdge.target,
-            className: 'temp',
-            style: { stroke: '#3b82f6', strokeDasharray: '5,5', strokeWidth: 2 },
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#3b82f6' },
+            className: "temp",
+            style: {
+              stroke: "#3b82f6",
+              strokeDasharray: "5,5",
+              strokeWidth: 2,
+            },
+            markerEnd: { type: MarkerType.ArrowClosed, color: "#3b82f6" },
             data: {
               id: closeEdge.id,
               fromNode: closeEdge.source,
@@ -263,7 +305,7 @@ export default function TournamentEditor({
       const closeEdge = getClosestEdge(node);
 
       setEdges((es) => {
-        const nextEdges = es.filter((e) => e.className !== 'temp');
+        const nextEdges = es.filter((e) => e.className !== "temp");
 
         if (
           closeEdge &&
@@ -358,11 +400,13 @@ export default function TournamentEditor({
     [setNodes, stopEditing]
   );
 
+  // Optimización: Memoizar nodeTypes para evitar re-renders innecesarios
   const nodeTypes = useMemo(
     () => ({
-      editable: (props: NodeProps<GraphNode>) => (
+      editable: (props: NodeProps) => (
         <EditableNode
-          data={props.data}
+          key={props.id} // Añadir key para mejor tracking de React
+          data={props.data as GraphNode}
           onChange={(updates) => handleNodeChange(props.id, updates)}
           isConnectable={props.isConnectable}
           isEditing={isCurrentlyEditing("node", props.id)}
@@ -370,14 +414,27 @@ export default function TournamentEditor({
           onStopEditing={stopEditing}
         />
       ),
+      readonly: (props: NodeProps) => (
+        <EditableNode
+          key={props.id}
+          data={props.data as GraphNode}
+          onChange={() => {}} // No-op en modo solo lectura
+          isConnectable={false}
+          isEditing={false}
+          onStartEditing={() => {}} // No-op en modo solo lectura
+          onStopEditing={() => {}} // No-op en modo solo lectura
+        />
+      ),
     }),
     [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing]
   );
 
+  // Optimización: Memoizar edgeTypes para evitar re-renders innecesarios
   const edgeTypes = useMemo(
     () => ({
-      editable: (props: EdgeProps<EditableEdgeData>) => (
+      editable: (props: EdgeProps) => (
         <EditableEdge
+          key={props.id} // Añadir key para mejor tracking de React
           {...props}
           onConditionUpdate={handleEdgeConditionUpdate}
           isEditing={isCurrentlyEditing("edge", props.id)}
@@ -448,20 +505,21 @@ export default function TournamentEditor({
     });
   }, [rfNodes, rfEdges, setNodes, setEdges]);
 
-  // Manejar conexiones entre nodos
+  // Manejar conexiones entre nodos usando las mejores prácticas
   const onConnect = useCallback(
     (params: Connection) => {
-      if (!editable) return;
+      if (!editable || !params.source || !params.target) return;
 
+      const newEdgeId = `edge-${Date.now()}`;
       const newEdge: Edge = {
-        id: `edge-${Date.now()}`,
-        source: params.source!,
-        target: params.target!,
+        id: newEdgeId,
+        source: params.source,
+        target: params.target,
         type: "editable",
         data: {
-          id: `edge-${Date.now()}`,
-          fromNode: params.source!,
-          toNode: params.target!,
+          id: newEdgeId,
+          fromNode: params.source,
+          toNode: params.target,
           outcome: "points >= 0",
           editable: true,
           condition: {
@@ -471,13 +529,15 @@ export default function TournamentEditor({
           },
         },
         markerEnd: { type: MarkerType.ArrowClosed },
+        style: { strokeWidth: 1.5 },
       };
 
+      // Usar la utilidad addEdge de React Flow para mejor rendimiento
       setEdges((eds) => addEdge(newEdge, eds));
 
       // Agregar al historial
       addToHistory("ADD_EDGE", {
-        edgeId: newEdge.id,
+        edgeId: newEdgeId,
         afterState: newEdge,
       });
     },
@@ -517,7 +577,7 @@ export default function TournamentEditor({
 
       const reactFlowNode: Node = {
         id: newId,
-        type: "editable",
+        type: editable ? "editable" : "readonly",
         data: newNode,
         position: { x: 100, y: 100 },
       };
@@ -595,7 +655,10 @@ export default function TournamentEditor({
           setEdges((eds) =>
             eds.map((e) =>
               e.id === action.data.edgeId
-                ? { ...e, data: action.data.beforeState as unknown }
+                ? {
+                    ...e,
+                    data: action.data.beforeState as Record<string, unknown>,
+                  }
                 : e
             )
           );
@@ -688,7 +751,10 @@ export default function TournamentEditor({
           setEdges((eds) =>
             eds.map((e) =>
               e.id === action.data.edgeId
-                ? { ...e, data: action.data.afterState as unknown }
+                ? {
+                    ...e,
+                    data: action.data.afterState as Record<string, unknown>,
+                  }
                 : e
             )
           );
@@ -718,10 +784,17 @@ export default function TournamentEditor({
     setHistory((prev) => ({ ...prev, currentIndex: nextIndex }));
   }, [history, setNodes, setEdges]);
 
-  // Resetear layout
+  // Resetear layout usando las utilidades de React Flow
   const resetLayout = useCallback(() => {
     setNodes(rfNodes);
-  }, [rfNodes, setNodes]);
+
+    // Fit view automáticamente después del reset usando la instancia de React Flow
+    setTimeout(() => {
+      const bounds = getNodesBounds(rfNodes);
+      const viewport = getViewportForBounds(bounds, 300, 300, 0.1, 2, 0.1);
+      reactFlowInstance.setViewport(viewport);
+    }, 0);
+  }, [rfNodes, setNodes, reactFlowInstance]);
 
   // Manejar selección de nodos
   const onNodeClick = useCallback(
@@ -750,7 +823,7 @@ export default function TournamentEditor({
     if (selectedNodeId && editable) {
       const nodeData = nodes.find((n) => n.id === selectedNodeId)?.data;
       if (nodeData) {
-        setCopiedNode(nodeData);
+        setCopiedNode(nodeData as GraphNode);
       }
     }
   }, [selectedNodeId, nodes, editable]);
@@ -909,23 +982,23 @@ export default function TournamentEditor({
   // Exportar configuración
   const exportConfiguration = useCallback(() => {
     // Construir el grafo actualizado con el estado actual de React Flow
-    const currentGraph = {
+    const currentGraph: TournamentGraph = {
       ...graph,
       nodes: nodes.map((n) => ({
-        ...n.data,
+        ...(n.data as GraphNode),
         position: n.position,
         // Asegurar que la configuración de match se incluya
-        ...(n.data.type === "match" && n.data.matchConfig && {
-          matchConfig: n.data.matchConfig,
-        }),
+        ...((n.data as GraphNode).type === "match" &&
+          (n.data as GraphNode).matchConfig && {
+            matchConfig: (n.data as GraphNode).matchConfig,
+          }),
       })),
       edges: edges.map((e) => ({
-        ...e.data,
+        ...(e.data as GraphEdge),
       })),
       metadata: {
         ...graph.metadata,
         lastModified: new Date().toISOString(),
-        exportedAt: new Date().toISOString(),
       },
     };
 
@@ -990,8 +1063,8 @@ export default function TournamentEditor({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
@@ -999,12 +1072,22 @@ export default function TournamentEditor({
         onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        nodesDraggable={true}
+        nodesDraggable={editable}
         nodesConnectable={editable}
-        elementsSelectable={true}
+        elementsSelectable={editable}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.2, minZoom: 0.1, maxZoom: 2 }}
         className="bg-transparent"
+        proOptions={{ hideAttribution: true }}
+        deleteKeyCode={editable ? "Delete" : null}
+        elevateNodesOnSelect={true}
+        selectNodesOnDrag={false}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
+        preventScrolling={true}
+        colorMode="dark"
       >
         <MiniMap pannable zoomable nodeColor="#6b7280" />
         <Controls />
@@ -1028,7 +1111,8 @@ export default function TournamentEditor({
               )}
               {selectedEdgeId && (
                 <span className="text-blue-600 font-medium">
-                  🔗 Selected Edge: {selectedEdgeId.slice(0, 8)}... (Press Delete to remove)
+                  🔗 Selected Edge: {selectedEdgeId.slice(0, 8)}... (Press
+                  Delete to remove)
                 </span>
               )}
               {copiedNode && (
@@ -1038,25 +1122,15 @@ export default function TournamentEditor({
           )}
         </div>
       </div>
-
-      {/* Help text for shortcuts */}
-      {editable && (
-        <div className="absolute bottom-4 right-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm p-2 text-xs text-blue-700">
-          <div>
-            💡 <strong>Controls:</strong>
-          </div>
-          <div>• Click node/edge to select</div>
-          <div>• Drag nodes to move them</div>
-          <div>• Drag near other nodes to auto-connect</div>
-          <div>• Use handles (⚪) to connect manually</div>
-          <div>• Click edges to select (animated dashed lines)</div>
-          <div>• Ctrl+C to copy node</div>
-          <div>• Ctrl+V to paste node</div>
-          <div>• Ctrl+Z to undo</div>
-          <div>• Ctrl+Y to redo</div>
-          <div>• Delete key to remove selected item</div>
-        </div>
-      )}
     </div>
+  );
+}
+
+// Componente principal envuelto con ReactFlowProvider para mejores prácticas
+export default function TournamentEditor(props: TournamentEditorProps) {
+  return (
+    <ReactFlowProvider>
+      <TournamentEditorInternal {...props} />
+    </ReactFlowProvider>
   );
 }

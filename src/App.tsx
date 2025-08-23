@@ -1,6 +1,5 @@
 import { useState } from "react";
 import TournamentEditor from "./TournamentEditor";
-import TournamentGraphView from "./TournamentGraphView";
 import type { TournamentGraph } from "./types";
 import "@xyflow/react/dist/style.css";
 
@@ -75,16 +74,12 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main Content */}
-      {useEditor ? (
-        <TournamentEditor
-          graph={currentGraph}
-          onGraphChange={handleGraphChange}
-          editable={true}
-        />
-      ) : (
-        <TournamentGraphView graph={currentGraph} />
-      )}
+      {/* Main Content - Usar solo TournamentEditor */}
+      <TournamentEditor
+        graph={currentGraph}
+        onGraphChange={useEditor ? handleGraphChange : undefined}
+        editable={useEditor}
+      />
     </div>
   );
 }

@@ -263,7 +263,10 @@ interface MatchConfigEditorProps {
   onChange: (config: MatchConfiguration) => void;
 }
 
-export function MatchConfigEditor({ config, onChange }: MatchConfigEditorProps) {
+export function MatchConfigEditor({
+  config,
+  onChange,
+}: MatchConfigEditorProps) {
   const modalityOptions = [
     { value: "presencial", label: "Presencial" },
     { value: "online", label: "Online" },
@@ -283,16 +286,16 @@ export function MatchConfigEditor({ config, onChange }: MatchConfigEditorProps) 
       </h4>
 
       <FormField
-        label="Capacity"
+        label="Participantes"
         value={config.capacity}
         onChange={(val) => updateConfig("capacity", Number(val))}
         type="number"
-        placeholder="Number of participants"
+        placeholder="Cantidad de participantes"
         required
       />
 
       <FormField
-        label="Modality"
+        label="Modalidad"
         value={config.modality}
         onChange={(val) => updateConfig("modality", val as MatchModality)}
         type="select"
@@ -302,17 +305,24 @@ export function MatchConfigEditor({ config, onChange }: MatchConfigEditorProps) 
 
       <div className="space-y-2">
         <label className="block text-xs font-medium text-gray-700">
-          Scheduled Date
+          Fecha Programada
         </label>
         <input
           type="date"
-          value={config.scheduledDate ? config.scheduledDate.toISOString().split('T')[0] : ''}
+          value={
+            config.scheduledDate
+              ? config.scheduledDate.toISOString().split("T")[0]
+              : ""
+          }
           onChange={(e) => {
             const date = e.target.value ? new Date(e.target.value) : undefined;
             if (date) {
               updateConfig("scheduledDate", date);
             } else {
-              updateConfig("scheduledDate", undefined as any);
+              updateConfig(
+                "scheduledDate",
+                undefined as unknown as string | number | Date
+              );
             }
           }}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
@@ -321,11 +331,11 @@ export function MatchConfigEditor({ config, onChange }: MatchConfigEditorProps) 
 
       <div className="space-y-2">
         <label className="block text-xs font-medium text-gray-700">
-          Scheduled Time
+          Hora Programada
         </label>
         <input
           type="time"
-          value={config.scheduledTime || ''}
+          value={config.scheduledTime || ""}
           onChange={(e) => updateConfig("scheduledTime", e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
         />
