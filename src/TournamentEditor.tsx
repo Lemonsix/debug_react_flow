@@ -39,8 +39,6 @@ const NODE_W = 400;
 const NODE_H = 280;
 const MIN_DISTANCE = 150; // Distancia mínima para proximity connect
 
-// Tipos de nodos y edges serán definidos dentro del componente
-
 interface TournamentEditorProps {
   graph: TournamentGraph;
   editable?: boolean;
@@ -162,7 +160,7 @@ function TournamentEditorInternal({
     }
 
     return { rfNodes, rfEdges };
-  }, [graph, editable]);
+  }, [graph.nodes, graph.edges, editable]);
 
   // Estado para nodos y edges con manejo optimizado
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
@@ -400,12 +398,12 @@ function TournamentEditorInternal({
     [setNodes, stopEditing]
   );
 
-  // Optimización: Memoizar nodeTypes para evitar re-renders innecesarios
+  // Usar nodeTypes y edgeTypes memoizados con dependencias mínimas
   const nodeTypes = useMemo(
     () => ({
       editable: (props: NodeProps) => (
         <EditableNode
-          key={props.id} // Añadir key para mejor tracking de React
+          key={props.id}
           data={props.data as GraphNode}
           onChange={(updates) => handleNodeChange(props.id, updates)}
           isConnectable={props.isConnectable}
@@ -426,15 +424,14 @@ function TournamentEditorInternal({
         />
       ),
     }),
-    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing]
+    []
   );
 
-  // Optimización: Memoizar edgeTypes para evitar re-renders innecesarios
   const edgeTypes = useMemo(
     () => ({
       editable: (props: EdgeProps) => (
         <EditableEdge
-          key={props.id} // Añadir key para mejor tracking de React
+          key={props.id}
           {...props}
           onConditionUpdate={handleEdgeConditionUpdate}
           isEditing={isCurrentlyEditing("edge", props.id)}
@@ -444,11 +441,11 @@ function TournamentEditorInternal({
       ),
       simple: SimpleEdge,
     }),
-    [handleEdgeConditionUpdate, isCurrentlyEditing, startEditing, stopEditing]
+    []
   );
 
   // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
-  useMemo(() => {
+  useEffect(() => {
     // Solo actualizar si es la primera carga o si el número de nodos cambió significativamente
     setNodes((currentNodes) => {
       // Si no hay nodos actuales, usar los nuevos
@@ -503,7 +500,7 @@ function TournamentEditorInternal({
       // Mantener edges actuales si no cambiaron
       return currentEdges;
     });
-  }, [rfNodes, rfEdges, setNodes, setEdges]);
+  }, [rfNodes, rfEdges]);
 
   // Manejar conexiones entre nodos usando las mejores prácticas
   const onConnect = useCallback(
@@ -568,7 +565,7 @@ function TournamentEditorInternal({
         ...(nodeType === "match" && {
           matchConfig: {
             capacity: 2,
-            modality: "presencial" as const,
+            modalidad: "presencial" as const,
             scheduledDate: undefined,
             scheduledTime: undefined,
           },
@@ -591,7 +588,7 @@ function TournamentEditorInternal({
         afterState: reactFlowNode,
       });
     },
-    [graph, setNodes, addToHistory]
+    [graph.phaseId, editable, setNodes, addToHistory]
   );
 
   // Undo

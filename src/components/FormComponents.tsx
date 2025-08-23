@@ -1,14 +1,15 @@
 import { PencilIcon } from "lucide-react";
-import { TimestampPicker } from "./Timepicker";
+import * as React from "react";
 import type {
-  NodeType,
-  SinkType,
   ConditionOperator,
   EdgeCondition,
-  SinkConfiguration,
-  MatchModality,
   MatchConfiguration,
+  MatchModalidad,
+  NodeType,
+  SinkConfiguration,
+  SinkType,
 } from "../types";
+import { TimestampPicker } from "./Timepicker";
 
 // Componente base para inputs con validación
 interface FormFieldProps {
@@ -270,17 +271,23 @@ export function MatchConfigEditor({
   config,
   onChange,
 }: MatchConfigEditorProps) {
-  const modalityOptions = [
-    { value: "presencial", label: "Presencial" },
-    { value: "online", label: "Online" },
-  ];
+  const modalityOptions = React.useMemo(
+    () => [
+      { value: "presencial" as const, label: "Presencial" },
+      { value: "online" as const, label: "Online" },
+    ],
+    []
+  );
 
-  const updateConfig = (
-    field: keyof MatchConfiguration,
-    value: string | number | Date | undefined
-  ) => {
-    onChange({ ...config, [field]: value });
-  };
+  const updateConfig = React.useCallback(
+    (
+      field: keyof MatchConfiguration,
+      value: string | number | Date | undefined
+    ) => {
+      onChange({ ...config, [field]: value });
+    },
+    [config, onChange]
+  );
 
   return (
     <div className="space-y-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
@@ -299,8 +306,8 @@ export function MatchConfigEditor({
 
       <FormField
         label="Modalidad"
-        value={config.modality}
-        onChange={(val) => updateConfig("modality", val as MatchModality)}
+        value={config.modalidad}
+        onChange={(val) => updateConfig("modalidad", val as MatchModalidad)}
         type="select"
         options={modalityOptions}
         required

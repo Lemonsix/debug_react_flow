@@ -1,4 +1,9 @@
-import type { NodeType, EdgeCondition, SinkConfiguration, MatchConfiguration } from "../types";
+import type {
+  NodeType,
+  EdgeCondition,
+  SinkConfiguration,
+  MatchConfiguration,
+} from "../types";
 
 // Validación para formularios de nodo
 export function validateNodeForm(
@@ -37,8 +42,8 @@ export function validateNodeForm(
       errors.matchCapacity = "Match capacity must be at least 1";
     }
 
-    if (!matchConfig.modality) {
-      errors.modality = "Modality is required";
+    if (!matchConfig.modalidad) {
+      errors.modalidad = "Modalidad is required";
     }
   }
 

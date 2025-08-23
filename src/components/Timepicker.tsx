@@ -100,24 +100,46 @@ export function TimestampPicker({
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={clsx(
-            "w-full justify-start text-left font-normal border-gray-300 h-9",
-            { "text-muted-foreground": !value },
-            className
+        <div className="flex gap-2">
+          <Button
+            variant={"outline"}
+            className={clsx(
+              "flex-1 justify-start text-left font-normal border-gray-300 h-9",
+              { "text-muted-foreground": !value },
+              className
+            )}
+            onClick={() => setIsOpen(!isOpen)}
+            disabled={disabled}
+          >
+            {value ? (
+              formatDisplayValue(value)
+            ) : (
+              <span className="text-xs text-accent">
+                {includeTime
+                  ? "Seleccione fecha y hora"
+                  : "Seleccione una fecha"}
+              </span>
+            )}
+          </Button>
+
+          {value && (
+            <Button
+              variant={"outline"}
+              size="sm"
+              className="px-3 border-gray-300 text-gray-600 hover:bg-gray-50"
+              onClick={() => {
+                if (onChange) {
+                  onChange(undefined);
+                }
+                setSelectedDate(undefined);
+                setTime({ hours: 0, minutes: 0, seconds: 0 });
+              }}
+              title="Limpiar fecha y hora"
+            >
+              ✕
+            </Button>
           )}
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={disabled}
-        >
-          {value ? (
-            formatDisplayValue(value)
-          ) : (
-            <span className="text-xs">
-              {includeTime ? "Seleccione fecha y hora" : "Seleccione una fecha"}
-            </span>
-          )}
-        </Button>
+        </div>
       </PopoverTrigger>
       <PopoverContent
         align="start"

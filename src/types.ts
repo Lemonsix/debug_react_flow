@@ -1,10 +1,10 @@
 export type NodeType = "match" | "sink";
 
-export type MatchModality = "presencial" | "online";
+export type MatchModalidad = "presencial" | "online";
 
 export type MatchConfiguration = {
   capacity: number;
-  modality: MatchModality;
+  modalidad: MatchModalidad;
   scheduledDate?: Date;
   scheduledTime?: string; // formato HH:mm
 };
@@ -123,7 +123,7 @@ export type HistoryAction = {
   id: string;
   type: HistoryActionType;
   timestamp: number;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 };
 
 export type HistoryState = {

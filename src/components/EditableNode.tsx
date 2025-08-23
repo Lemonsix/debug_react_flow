@@ -36,13 +36,13 @@ export default function EditableNode({
     sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
     matchConfig: data.matchConfig || {
       capacity: data.capacity,
-      modality: "presencial" as const,
+      modalidad: "presencial" as const,
       scheduledDate: undefined,
       scheduledTime: undefined,
     },
   });
 
-  // Sincronizar formData cuando cambie data
+  // Sincronizar formData solo cuando cambien las propiedades relevantes para el formulario
   useEffect(() => {
     setFormData({
       type: data.type,
@@ -50,12 +50,12 @@ export default function EditableNode({
       sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
       matchConfig: data.matchConfig || {
         capacity: data.capacity,
-        modality: "presencial" as const,
+        modalidad: "presencial" as const,
         scheduledDate: undefined,
         scheduledTime: undefined,
       },
     });
-  }, [data]);
+  }, [data.type, data.capacity, data.sinkConfig, data.matchConfig]);
 
   // Validación del formulario
   const validation = validateNodeForm(
@@ -105,7 +105,7 @@ export default function EditableNode({
       sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
       matchConfig: data.matchConfig || {
         capacity: data.capacity,
-        modality: "presencial" as const,
+        modalidad: "presencial" as const,
         scheduledDate: undefined,
         scheduledTime: undefined,
       },
@@ -200,7 +200,7 @@ export default function EditableNode({
         {formData.type === "match" && !isEditing && formData.matchConfig && (
           <div className=" text-left">
             <div className="text-xs text-emerald-600 font-medium mb-1">
-              {formData.matchConfig.modality === "presencial"
+              {formData.matchConfig.modalidad === "presencial"
                 ? "Presencial"
                 : "Online"}
             </div>
