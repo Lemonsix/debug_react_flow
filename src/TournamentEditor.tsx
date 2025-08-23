@@ -424,7 +424,7 @@ function TournamentEditorInternal({
         />
       ),
     }),
-    []
+    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing]
   );
 
   const edgeTypes = useMemo(
@@ -441,7 +441,7 @@ function TournamentEditorInternal({
       ),
       simple: SimpleEdge,
     }),
-    []
+    [handleEdgeConditionUpdate, isCurrentlyEditing, startEditing, stopEditing]
   );
 
   // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
@@ -500,7 +500,7 @@ function TournamentEditorInternal({
       // Mantener edges actuales si no cambiaron
       return currentEdges;
     });
-  }, [rfNodes, rfEdges]);
+  }, [rfNodes, rfEdges, setNodes, setEdges]);
 
   // Manejar conexiones entre nodos usando las mejores prácticas
   const onConnect = useCallback(
@@ -512,6 +512,7 @@ function TournamentEditorInternal({
         id: newEdgeId,
         source: params.source,
         target: params.target,
+        animated: true,
         type: "editable",
         data: {
           id: newEdgeId,

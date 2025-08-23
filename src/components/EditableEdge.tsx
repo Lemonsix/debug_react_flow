@@ -130,7 +130,6 @@ export default function EditableEdge({
           strokeDasharray: "8 4",
           strokeDashoffset: "0",
           transition: "all 0.2s",
-          animation: "dash-flow 2s linear infinite",
           pointerEvents: "none", // Solo el invisible debe recibir clicks
           cursor: "pointer",
         }}
@@ -289,7 +288,7 @@ export function SimpleEdge({
           strokeWidth: 2,
           strokeDasharray: "8 4",
           strokeDashoffset: "0",
-          animation: "dash-flow 2s linear infinite",
+          // animation: "dash-flow 2s linear infinite",
           pointerEvents: "none", // Solo el invisible debe recibir clicks
           cursor: "pointer",
         }}
