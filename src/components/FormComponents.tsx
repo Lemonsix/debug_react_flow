@@ -1,3 +1,4 @@
+import { PencilIcon } from "lucide-react";
 import type {
   NodeType,
   SinkType,
@@ -126,25 +127,26 @@ export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
       <h4 className="text-sm font-semibold text-purple-800">
         Configuración de Resultado Final
       </h4>
-
-      <FormField
-        label="Tipo de Resultado"
-        value={config.sinkType}
-        onChange={(val) => updateConfig("sinkType", val as SinkType)}
-        type="select"
-        options={sinkTypeOptions}
-        required
-      />
-
-      {config.sinkType === "podium" && (
+      <div className="flex flex-row gap-2">
         <FormField
-          label="Posición"
-          value={config.position || 1}
-          onChange={(val) => updateConfig("position", Number(val))}
-          type="number"
-          placeholder="1, 2, 3..."
+          label="Tipo de Resultado"
+          value={config.sinkType}
+          onChange={(val) => updateConfig("sinkType", val as SinkType)}
+          type="select"
+          options={sinkTypeOptions}
+          required
         />
-      )}
+
+        {config.sinkType === "podium" && (
+          <FormField
+            label="Posición"
+            value={config.position || 1}
+            onChange={(val) => updateConfig("position", Number(val))}
+            type="number"
+            placeholder="1, 2, 3..."
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -243,7 +245,7 @@ export function EditToggle({
       onClick={() => onToggle(!isEditing)}
       disabled={disabled}
       className={`
-        px-3 py-1 text-xs font-medium rounded-md transition-all duration-200
+        px-1 py-1 text-xs font-medium rounded-md transition-all duration-200
         ${
           isEditing
             ? "bg-green-100 text-green-800 border border-green-300 hover:bg-green-200"
@@ -252,7 +254,7 @@ export function EditToggle({
         ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
       `}
     >
-      {isEditing ? "✓ Editing" : "✏️"}
+      {isEditing ? "✓ Editing" : <PencilIcon className="w-4 h-4" />}
     </button>
   );
 }

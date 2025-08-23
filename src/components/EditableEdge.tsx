@@ -287,7 +287,6 @@ export function SimpleEdge({
         markerEnd={markerEnd}
         style={{
           strokeWidth: 2,
-          stroke: "#6366f1",
           strokeDasharray: "8 4",
           strokeDashoffset: "0",
           animation: "dash-flow 2s linear infinite",

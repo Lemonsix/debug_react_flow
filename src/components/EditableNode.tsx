@@ -9,6 +9,7 @@ import {
 } from "./FormComponents";
 import { validateNodeForm } from "../utils/validation";
 import type { MatchConfiguration } from "../types";
+import { PencilIcon } from "lucide-react";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -115,7 +116,6 @@ export default function EditableNode({
   };
 
   const config = nodeTypeConfig[formData.type];
-  const filled = data.slots?.filter((s) => !!s.participantId).length || 0;
 
   return (
     <div
@@ -130,11 +130,7 @@ export default function EditableNode({
             ? "cursor-default"
             : "cursor-pointer"
         }
-        ${
-          formData.type === "match" && !isEditing
-            ? "min-w-32 max-w-32"
-            : "min-w-80 max-w-80"
-        }
+       
       `}
       onClick={() => {
         // Solo los nodos no-match se pueden editar con clic general
@@ -144,11 +140,7 @@ export default function EditableNode({
       }}
     >
       {/* Header del nodo con toggle de edición */}
-      <div
-        className={`${
-          formData.type === "match" && !isEditing ? "p-2" : "p-4"
-        } border-b border-gray-100`}
-      >
+      <div className={`flex flex-row p-2 gap-2`}>
         <div
           className={`flex items-center ${
             formData.type === "match" && !isEditing
@@ -156,7 +148,7 @@ export default function EditableNode({
               : "justify-between"
           } ${formData.type === "match" && !isEditing ? "" : "mb-3"}`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <div
               className={`${config.accent} w-8 h-8 rounded-lg flex items-center justify-center`}
             >
@@ -169,11 +161,6 @@ export default function EditableNode({
                 <div className={`font-semibold text-sm ${config.text}`}>
                   {formData.type.toUpperCase()}
                 </div>
-                {formData.type !== "match" && formData.type !== "sink" && (
-                  <div className="text-xs text-gray-500 font-medium">
-                    ID: {data.id.slice(0, 8)}...
-                  </div>
-                )}
               </div>
             ) : null}
           </div>
@@ -187,30 +174,22 @@ export default function EditableNode({
               }}
               className="absolute top-1 right-1 w-6 h-6 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
             >
-              <span className="text-xs text-gray-600">✏️</span>
+              <span className="hover:cursor-pointer">
+                <PencilIcon className="w-4 h-4" />
+              </span>
             </button>
           )}
         </div>
 
-        {/* Información del nodo - solo para nodos que no sean match ni sink */}
-        {formData.type !== "match" && formData.type !== "sink" && (
-          <div className="bg-gray-50 rounded px-3 py-2 border border-gray-200">
-            <div className="text-xs text-gray-500 mb-1">Node ID</div>
-            <div className="font-mono text-xs text-gray-700 break-all leading-relaxed">
-              {data.id}
-            </div>
-          </div>
-        )}
-
         {/* Información del nodo match cuando no está en edición */}
         {formData.type === "match" && !isEditing && formData.matchConfig && (
-          <div className="p-2 text-center">
+          <div className=" text-left">
             <div className="text-xs text-emerald-600 font-medium mb-1">
               {formData.matchConfig.modality === "presencial"
-                ? "🏟️ Presencial"
-                : "💻 Online"}
+                ? "Presencial"
+                : "Online"}
             </div>
-            <div className="text-xs text-emerald-600">
+            <div className="text-nowrap text-xs text-emerald-600">
               {formData.matchConfig.capacity} participantes
             </div>
             {formData.matchConfig.scheduledDate && (
@@ -227,7 +206,7 @@ export default function EditableNode({
 
       {/* Formulario de edición */}
       {isEditing && (
-        <div className="p-4 border-b border-gray-100 bg-gray-50">
+        <div className="px-4 pb-4 border-b border-gray-100 bg-gray-50">
           <div className="space-y-3">
             {formData.type === "match" ? (
               <MatchConfigEditor
@@ -251,7 +230,7 @@ export default function EditableNode({
                   value={formData.capacity}
                   onChange={(value) => handleUpdate("capacity", value)}
                   type="number"
-                  placeholder="Número de participantes"
+                  placeholder="Cantidad de participantes"
                   required
                   error={validation.errors.capacity}
                 />
@@ -284,73 +263,6 @@ export default function EditableNode({
           </div>
         </div>
       )}
-
-      {/* Información de capacidad */}
-      {formData.type !== "sink" && formData.type !== "match" && !isEditing && (
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Capacity</span>
-            <div
-              className={`
-                px-2 py-1 rounded text-xs font-semibold
-                ${
-                  filled === formData.capacity
-                    ? "bg-green-100 text-green-800"
-                    : filled > 0
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-gray-100 text-gray-800"
-                }
-              `}
-            >
-              {filled}/{formData.capacity}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Slots visuales */}
-      {formData.type !== "sink" &&
-        formData.type !== "match" &&
-        data.slots &&
-        data.slots.length > 0 &&
-        !isEditing && (
-          <div className="p-4">
-            <div className="text-sm font-medium text-gray-700 mb-3">Slots</div>
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {data.slots.slice(0, formData.capacity).map((slot, index) => (
-                <div
-                  key={index}
-                  className={`
-                  p-2 rounded border transition-colors text-xs
-                  ${
-                    slot.participantId
-                      ? "border-green-200 bg-green-50"
-                      : "border-gray-200 bg-gray-50"
-                  }
-                `}
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`
-                      w-5 h-3 rounded flex items-center justify-center text-xs font-bold
-                      ${
-                        slot.participantId
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-400 text-white"
-                      }
-                    `}
-                    >
-                      {index + 1}
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {slot.participantId ? "Occupied" : "Empty"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
       {/* Información para nodos sink */}
       {formData.type === "sink" && !isEditing && (
