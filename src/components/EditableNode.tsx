@@ -1,15 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
 import { Handle, Position } from "@xyflow/react";
 import type { GraphNode } from "../types";
-import {
-  FormField,
-  NodeTypeSelector,
-  SinkConfigEditor,
-  MatchConfigEditor,
-} from "./FormComponents";
+import { SinkConfigEditor, MatchConfigEditor } from "./FormComponents";
 import { validateNodeForm } from "../utils/validation";
 import type { MatchConfiguration } from "../types";
-import { PencilIcon } from "lucide-react";
+import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -135,7 +130,7 @@ export default function EditableNode({
   return (
     <div
       className={`
-        relative bg-white border-2 ${config.border} rounded-lg shadow-sm
+        flex flex-row bg-white border-2 ${config.border} rounded-lg shadow-sm
         hover:shadow-md transition-all duration-200
         ${isEditing ? "ring-2 ring-blue-400 ring-opacity-50" : ""}
         ${
@@ -221,8 +216,8 @@ export default function EditableNode({
 
       {/* Formulario de edición */}
       {isEditing && (
-        <div className="px-4 pb-4 border-b border-gray-100 bg-gray-50">
-          <div className="space-y-3">
+        <div className="p-2 ">
+          <div>
             {formData.type === "match" ? (
               <MatchConfigEditor
                 config={formData.matchConfig}
@@ -233,24 +228,7 @@ export default function EditableNode({
                 config={formData.sinkConfig}
                 onChange={(config) => handleUpdate("sinkConfig", config)}
               />
-            ) : (
-              <>
-                <NodeTypeSelector
-                  value={formData.type}
-                  onChange={(type) => handleUpdate("type", type)}
-                />
-
-                <FormField
-                  label="Participantes"
-                  value={formData.capacity}
-                  onChange={(value) => handleUpdate("capacity", value)}
-                  type="number"
-                  placeholder="Cantidad de participantes"
-                  required
-                  error={validation.errors.capacity}
-                />
-              </>
-            )}
+            ) : null}
 
             {/* Botones de acción */}
             <div className="flex gap-2 pt-2">
@@ -266,13 +244,13 @@ export default function EditableNode({
                   }
                 `}
               >
-                Save
+                <SaveIcon className="w-4 h-4" />
               </button>
               <button
                 onClick={handleCancel}
                 className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                <XIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -281,8 +259,8 @@ export default function EditableNode({
 
       {/* Información para nodos sink */}
       {formData.type === "sink" && !isEditing && (
-        <div className="p-4">
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+        <div className="p-1">
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
             <div className="text-purple-700 text-sm font-semibold mb-1">
               {formData.sinkConfig?.sinkType === "podium"
                 ? "🏆 Podio"

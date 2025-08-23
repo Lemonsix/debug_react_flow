@@ -5,7 +5,6 @@ import type {
   EdgeCondition,
   MatchConfiguration,
   MatchModalidad,
-  NodeType,
   SinkConfiguration,
   SinkType,
 } from "../types";
@@ -21,6 +20,7 @@ interface FormFieldProps {
   placeholder?: string;
   error?: string;
   required?: boolean;
+  className?: string;
 }
 
 export function FormField({
@@ -30,11 +30,12 @@ export function FormField({
   type = "text",
   options,
   placeholder,
+  className,
   error,
   required = false,
 }: FormFieldProps) {
   const baseInputClasses = `
-    w-full px-3 py-2 text-sm border rounded-md transition-colors
+    ${className} w-full px-3 py-2 text-sm border rounded-md transition-colors
     ${
       error
         ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-200"
@@ -81,30 +82,6 @@ export function FormField({
   );
 }
 
-// Selector de tipo de nodo
-interface NodeTypeSelectorProps {
-  value: NodeType;
-  onChange: (type: NodeType) => void;
-}
-
-export function NodeTypeSelector({ value, onChange }: NodeTypeSelectorProps) {
-  const nodeTypeOptions = [
-    { value: "match", label: "Match" },
-    { value: "sink", label: "Sink" },
-  ];
-
-  return (
-    <FormField
-      label="Node Type"
-      value={value}
-      onChange={(val) => onChange(val as NodeType)}
-      type="select"
-      options={nodeTypeOptions}
-      required
-    />
-  );
-}
-
 // Configuración específica para nodos sink
 interface SinkConfigEditorProps {
   config: SinkConfiguration;
@@ -127,9 +104,9 @@ export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
   return (
     <div className="space-y-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
       <h4 className="text-sm font-semibold text-purple-800">
-        Configuración de Resultado Final
+        Configuración de Sink
       </h4>
-      <div className="flex flex-row gap-2">
+      <div className="flex flex-col gap-2">
         <FormField
           label="Tipo de Resultado"
           value={config.sinkType}
@@ -291,27 +268,25 @@ export function MatchConfigEditor({
 
   return (
     <div className="space-y-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-      <h4 className="text-sm font-semibold text-emerald-800">
-        Match Configuration
-      </h4>
+      <div className="flex flex-col gap-2">
+        <FormField
+          label="Participantes"
+          value={config.capacity}
+          onChange={(val) => updateConfig("capacity", Number(val))}
+          type="number"
+          placeholder="Cantidad de participantes"
+          required
+        />
 
-      <FormField
-        label="Participantes"
-        value={config.capacity}
-        onChange={(val) => updateConfig("capacity", Number(val))}
-        type="number"
-        placeholder="Cantidad de participantes"
-        required
-      />
-
-      <FormField
-        label="Modalidad"
-        value={config.modalidad}
-        onChange={(val) => updateConfig("modalidad", val as MatchModalidad)}
-        type="select"
-        options={modalityOptions}
-        required
-      />
+        <FormField
+          label="Modalidad"
+          value={config.modalidad}
+          onChange={(val) => updateConfig("modalidad", val as MatchModalidad)}
+          type="select"
+          options={modalityOptions}
+          required
+        />
+      </div>
 
       <div className="space-y-2">
         <label className="block text-xs font-medium text-gray-700">
