@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Handle, Position } from "@xyflow/react";
 import type { GraphNode } from "../types";
 import {
@@ -41,6 +41,21 @@ export default function EditableNode({
       scheduledTime: undefined,
     },
   });
+
+  // Sincronizar formData cuando cambie data
+  useEffect(() => {
+    setFormData({
+      type: data.type,
+      capacity: data.capacity,
+      sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
+      matchConfig: data.matchConfig || {
+        capacity: data.capacity,
+        modality: "presencial" as const,
+        scheduledDate: undefined,
+        scheduledTime: undefined,
+      },
+    });
+  }, [data]);
 
   // Validación del formulario
   const validation = validateNodeForm(

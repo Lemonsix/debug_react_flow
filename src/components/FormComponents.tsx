@@ -1,4 +1,5 @@
 import { PencilIcon } from "lucide-react";
+import { TimestampPicker } from "./Timepicker";
 import type {
   NodeType,
   SinkType,
@@ -276,7 +277,7 @@ export function MatchConfigEditor({
 
   const updateConfig = (
     field: keyof MatchConfiguration,
-    value: string | number | Date
+    value: string | number | Date | undefined
   ) => {
     onChange({ ...config, [field]: value });
   };
@@ -307,39 +308,45 @@ export function MatchConfigEditor({
 
       <div className="space-y-2">
         <label className="block text-xs font-medium text-gray-700">
-          Fecha Programada
+          Fecha y Hora Programada
         </label>
-        <input
-          type="date"
+        <TimestampPicker
           value={
-            config.scheduledDate
-              ? config.scheduledDate.toISOString().split("T")[0]
-              : ""
+            config.scheduledDate && config.scheduledTime
+              ? new Date(
+                  `${config.scheduledDate.toISOString().split("T")[0]}T${
+                    config.scheduledTime
+                  }`
+                )
+              : config.scheduledDate
           }
-          onChange={(e) => {
-            const date = e.target.value ? new Date(e.target.value) : undefined;
-            if (date) {
-              updateConfig("scheduledDate", date);
+          onChange={(dateString: string | undefined) => {
+            if (dateString) {
+              const date = new Date(dateString);
+
+              // Extraer la hora en formato HH:mm
+              const hours = date.getHours().toString().padStart(2, "0");
+              const minutes = date.getMinutes().toString().padStart(2, "0");
+
+              // Actualizar ambos campos en una sola llamada para evitar sobrescribir
+              const updatedConfig = {
+                ...config,
+                scheduledDate: date,
+                scheduledTime: `${hours}:${minutes}`,
+              };
+              onChange(updatedConfig);
             } else {
-              updateConfig(
-                "scheduledDate",
-                undefined as unknown as string | number | Date
-              );
+              const updatedConfig = {
+                ...config,
+                scheduledDate: undefined,
+                scheduledTime: undefined,
+              };
+              onChange(updatedConfig);
             }
           }}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-700">
-          Hora Programada
-        </label>
-        <input
-          type="time"
-          value={config.scheduledTime || ""}
-          onChange={(e) => updateConfig("scheduledTime", e.target.value)}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+          includeTime={true}
+          timeFormat="24"
+          className="w-full"
         />
       </div>
     </div>
