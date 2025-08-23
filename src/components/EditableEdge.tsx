@@ -126,7 +126,7 @@ export default function EditableEdge({
         markerEnd={markerEnd}
         style={{
           strokeWidth: isEditing ? 3 : 2,
-          stroke: isEditing ? "#3b82f6" : "#6366f1",
+          stroke: isEditing ? "#FFEE86" : "#AAAAAA",
           strokeDasharray: "8 4",
           strokeDashoffset: "0",
           transition: "all 0.2s",
