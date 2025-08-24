@@ -141,22 +141,50 @@ export default function EditableNode({
   }, [data, onStopEditing]);
 
   // Configuración visual por tipo de nodo
-  const nodeTypeConfig = {
-    match: {
-      border: "border-emerald-200",
-      text: "text-emerald-800",
-      accent: "bg-emerald-500",
-      icon: "M",
-    },
-    sink: {
-      border: "border-purple-200",
-      text: "text-purple-800",
-      accent: "bg-purple-500",
-      icon: "S",
-    },
+  const getNodeConfig = () => {
+    if (formData.type === "match") {
+      return {
+        border: "border-emerald-200",
+        text: "text-emerald-800",
+        accent: "bg-emerald-500",
+        icon: "M",
+      };
+    } else if (formData.type === "sink") {
+      // Configuración específica según el tipo de sink
+      if (formData.sinkConfig?.sinkType === "podium") {
+        return {
+          border: "border-yellow-200",
+          text: "text-yellow-800",
+          accent: "bg-yellow-500",
+          icon: "P",
+        };
+      } else if (formData.sinkConfig?.sinkType === "disqualification") {
+        return {
+          border: "border-red-200",
+          text: "text-red-800",
+          accent: "bg-red-500",
+          icon: "E",
+        };
+      } else {
+        // Fallback para otros tipos de sink
+        return {
+          border: "border-gray-200",
+          text: "text-gray-800",
+          accent: "bg-gray-500",
+          icon: "S",
+        };
+      }
+    }
+    // Fallback genérico
+    return {
+      border: "border-gray-200",
+      text: "text-gray-800",
+      accent: "bg-gray-500",
+      icon: "?",
+    };
   };
 
-  const config = nodeTypeConfig[formData.type];
+  const config = getNodeConfig();
 
   return (
     <div
@@ -207,7 +235,15 @@ export default function EditableNode({
             {formData.type !== "match" || isEditing ? (
               <div>
                 <div className={`font-semibold text-sm ${config.text}`}>
-                  {formData.type.toUpperCase()}
+                  {formData.type === "sink" &&
+                  formData.sinkConfig?.sinkType === "podium"
+                    ? `Podio #${formData.sinkConfig.position || 1}`
+                    : formData.type === "sink" &&
+                      formData.sinkConfig?.sinkType === "disqualification"
+                    ? "Eliminación"
+                    : formData.type === "sink"
+                    ? "Resultado Final"
+                    : formData.type.toUpperCase()}
                 </div>
               </div>
             ) : null}
@@ -273,10 +309,17 @@ export default function EditableNode({
             {/* Botones de acción */}
             <div className="flex gap-2 pt-2">
               <button
+                onClick={handleCancel}
+                className="flex flex-row gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <XIcon className="w-4 h-4" />
+                Cancelar
+              </button>
+              <button
                 onClick={handleSave}
                 disabled={!validation.isValid}
                 className={`
-                  flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  flex flex-row gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors
                   ${
                     validation.isValid
                       ? "bg-green-600 text-white hover:bg-green-700"
@@ -285,12 +328,7 @@ export default function EditableNode({
                 `}
               >
                 <SaveIcon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleCancel}
-                className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                <XIcon className="w-4 h-4" />
+                Guardar
               </button>
             </div>
           </div>
@@ -298,25 +336,6 @@ export default function EditableNode({
       )}
 
       {/* Información para nodos sink */}
-      {formData.type === "sink" && !isEditing && (
-        <div className="p-1">
-          <div className="bg-muted border border-border rounded-lg p-2 text-center">
-            <div className="text-foreground text-sm font-semibold mb-1">
-              {formData.sinkConfig?.sinkType === "podium"
-                ? "🏆 Podio"
-                : formData.sinkConfig?.sinkType === "disqualification"
-                ? "❌ Eliminación"
-                : "🏁 Resultado Final"}
-            </div>
-            {formData.sinkConfig?.sinkType === "podium" &&
-              formData.sinkConfig.position && (
-                <div className="text-purple-600 text-xs">
-                  Posición #{formData.sinkConfig.position}
-                </div>
-              )}
-          </div>
-        </div>
-      )}
 
       {/* Handles para conexiones - siempre visibles y más grandes */}
       <Handle
