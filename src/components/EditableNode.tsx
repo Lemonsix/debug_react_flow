@@ -41,6 +41,7 @@ export default function EditableNode({
       modalidad: "presencial" as const,
       scheduledDate: undefined,
       scheduledTime: undefined,
+      title: undefined,
     },
   });
 
@@ -55,6 +56,7 @@ export default function EditableNode({
         modalidad: "presencial" as const,
         scheduledDate: undefined,
         scheduledTime: undefined,
+        title: undefined,
       },
     });
   }, [data.type, data.capacity, data.sinkConfig, data.matchConfig]);
@@ -267,23 +269,43 @@ export default function EditableNode({
 
         {/* Información del nodo match cuando no está en edición */}
         {formData.type === "match" && !isEditing && formData.matchConfig && (
-          <div className=" text-left">
+          <div className="text-left">
+            {formData.matchConfig.title && (
+              <div className="text-sm text-emerald-700 font-semibold mb-1">
+                {formData.matchConfig.title}
+              </div>
+            )}
             <div className="text-xs text-emerald-600 font-medium mb-1">
               {formData.matchConfig.modalidad === "presencial"
                 ? "Presencial"
                 : "Online"}
             </div>
-            <div className="text-nowrap text-xs text-emerald-600">
+            <div className="text-nowrap text-xs text-emerald-600 mb-2">
               {formData.matchConfig.capacity} participantes
             </div>
             {formData.matchConfig.scheduledDate && (
-              <div className="text-xs text-emerald-600 mt-1">
+              <div className="text-xs text-emerald-600 mb-2">
                 📅 {formData.matchConfig.scheduledDate.toLocaleDateString()}
                 {formData.matchConfig.scheduledTime && (
                   <span> 🕐 {formData.matchConfig.scheduledTime}</span>
                 )}
               </div>
             )}
+
+            {/* Slots de equipos */}
+            <div className="space-y-1">
+              {Array.from(
+                { length: formData.matchConfig.capacity || 2 },
+                (_, index) => (
+                  <div
+                    key={index}
+                    className="px-2 py-1 text-xs border border-emerald-600 rounded  text-emerald-700 text-center"
+                  >
+                    Equipo {index + 1}
+                  </div>
+                )
+              )}
+            </div>
           </div>
         )}
       </div>

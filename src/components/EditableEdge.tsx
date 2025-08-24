@@ -239,7 +239,7 @@ export default function EditableEdge({
                   <span
                     className={`text-xs font-medium cursor-help ${
                       isDefault || condition.field === "default"
-                        ? "text-blue-700"
+                        ? "text-red-600"
                         : "text-gray-700"
                     }`}
                   >

@@ -399,6 +399,15 @@ export function MatchConfigEditor({
     <div className="space-y-3 p-3 text-foreground border border-border rounded-lg">
       <div className="flex flex-col gap-2">
         <FormField
+          label="Título"
+          value={config.title || ""}
+          onChange={(val) => updateConfig("title", val)}
+          type="text"
+          placeholder="Final, Semifinal, Cuartos..."
+          tooltip="Título descriptivo del match (ej: Final, Semifinal, Cuartos de Final)"
+        />
+
+        <FormField
           label="Participantes"
           value={config.capacity || ""}
           previousValue={config.capacity}

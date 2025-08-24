@@ -7,6 +7,7 @@ export type MatchConfiguration = {
   modalidad: MatchModalidad;
   scheduledDate?: Date;
   scheduledTime?: string; // formato HH:mm
+  title?: string; // título del match (ej: Final, Semifinal, Cuartos)
 };
 
 export type PhaseSink = {
