@@ -393,3 +393,107 @@ export function findCircularPath(
 
   return findPath(targetNodeId, sourceNodeId, []);
 }
+
+/**
+ * Valida si se pueden eliminar los nodos sink seleccionados según las reglas específicas
+ */
+export function validateSinkDeletion(
+  nodesToDelete: { id: string; data: any }[],
+  allNodes: { id: string; data: any }[]
+): { isValid: boolean; error?: string } {
+  // Identificar nodos sink en la selección
+  const sinkNodesToDelete = nodesToDelete.filter(
+    (node) => node.data.type === "sink"
+  );
+
+  if (sinkNodesToDelete.length === 0) {
+    return { isValid: true }; // No hay nodos sink, no hay problema
+  }
+
+  // Regla 1: No se puede eliminar el nodo de eliminación
+  const eliminationNode = sinkNodesToDelete.find(
+    (node) => node.data.sinkConfig?.sinkType === "disqualification"
+  );
+
+  if (eliminationNode) {
+    return {
+      isValid: false,
+      error: "No se puede eliminar el nodo de eliminación.",
+    };
+  }
+
+  // Regla 2: Solo se pueden eliminar podios contiguos desde el mayor
+  const podiumNodesToDelete = sinkNodesToDelete.filter(
+    (node) => node.data.sinkConfig?.sinkType === "podium"
+  );
+
+  if (podiumNodesToDelete.length > 0) {
+    // Obtener todos los podios existentes ordenados por posición
+    const allPodiums = allNodes
+      .filter(
+        (node) =>
+          node.data.type === "sink" &&
+          node.data.sinkConfig?.sinkType === "podium" &&
+          node.data.sinkConfig?.position
+      )
+      .map((node) => ({
+        id: node.id,
+        position: node.data.sinkConfig!.position!,
+      }))
+      .sort((a, b) => a.position - b.position);
+
+    // Obtener posiciones de los podios a eliminar
+    const positionsToDelete = podiumNodesToDelete
+      .map((node) => node.data.sinkConfig?.position)
+      .filter((pos): pos is number => pos !== undefined)
+      .sort((a, b) => a - b);
+
+    // Verificar que no se está eliminando el primer podio
+    if (positionsToDelete.includes(1)) {
+      return {
+        isValid: false,
+        error: "No se puede eliminar el primer podio.",
+      };
+    }
+
+    // Obtener la posición máxima de todos los podios
+    const maxPosition = Math.max(...allPodiums.map((p) => p.position));
+
+    // Verificar que se está eliminando desde el mayor (para cualquier cantidad)
+    const maxPositionToDelete = Math.max(...positionsToDelete);
+
+    if (maxPositionToDelete !== maxPosition) {
+      return {
+        isValid: false,
+        error: "Solo se puede eliminar desde el podio con mayor número.",
+      };
+    }
+
+    // Verificar que las posiciones sean contiguas desde el final (para múltiples)
+    if (positionsToDelete.length > 1) {
+      const expectedPositions: number[] = [];
+      for (
+        let i = maxPosition;
+        i > maxPosition - positionsToDelete.length;
+        i--
+      ) {
+        expectedPositions.push(i);
+      }
+      expectedPositions.reverse(); // [max-n+1, max-n+2, ..., max]
+
+      const positionsMatch = positionsToDelete.every(
+        (pos, index) => pos === expectedPositions[index]
+      );
+
+      if (!positionsMatch) {
+        return {
+          isValid: false,
+          error:
+            "Solo se pueden eliminar podios contiguos desde el mayor número hacia abajo.",
+        };
+      }
+    }
+  }
+
+  return { isValid: true };
+}

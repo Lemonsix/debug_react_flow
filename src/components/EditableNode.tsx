@@ -29,7 +29,9 @@ export default function EditableNode({
   allNodes = [],
 }: EditableNodeProps) {
   // Usar el estado global de edición en lugar del local
-  const isEditing = globalIsEditing || data.editable;
+  // Los nodos sink nunca pueden ser editados
+  const isEditing =
+    data.type === "sink" ? false : globalIsEditing || data.editable;
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
@@ -174,8 +176,13 @@ export default function EditableNode({
        
       `}
       onClick={() => {
-        // Solo los nodos no-match se pueden editar con clic general
-        if (!isEditing && onStartEditing && formData.type !== "match") {
+        // Solo los nodos no-match y no-sink se pueden editar con clic general
+        if (
+          !isEditing &&
+          onStartEditing &&
+          formData.type !== "match" &&
+          formData.type !== "sink"
+        ) {
           onStartEditing();
         }
       }}

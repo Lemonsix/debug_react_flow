@@ -45,6 +45,7 @@ import {
   getNextAvailablePodiumPosition,
   validateTournamentStructure,
   detectCircularDependency,
+  validateSinkDeletion,
 } from "./utils/validation";
 
 const NODE_W = 400;
@@ -1382,17 +1383,23 @@ function TournamentEditorInternal({
     addToHistory,
   ]);
 
-  // Eliminar elementos seleccionados
-  const deleteSelectedElements = useCallback(() => {
-    if (!editable) return;
+  // Función unificada para validar eliminación de nodos
+  const validateNodeDeletion = useCallback(
+    (nodesToDelete: Node[]) => {
+      if (nodesToDelete.length === 0) return { success: true };
 
-    // Procesar selección múltiple si hay elementos seleccionados
-    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-      const nodesToDelete = nodes.filter((n) => selectedNodes.includes(n.id));
-      const edgesToDelete = edges.filter((e) => selectedEdges.includes(e.id));
+      // Validar reglas específicas de eliminación de nodos sink
+      const sinkValidation = validateSinkDeletion(nodesToDelete, nodes);
+      if (!sinkValidation.isValid) {
+        alert(sinkValidation.error);
+        return { success: false };
+      }
 
-      // Validar que después de eliminar los nodos seleccionados, el torneo mantenga su estructura mínima
-      const remainingNodes = nodes.filter((n) => !selectedNodes.includes(n.id));
+      // Validar que después de eliminar los nodos, el torneo mantenga su estructura mínima
+      const nodeIdsToDelete = nodesToDelete.map((n) => n.id);
+      const remainingNodes = nodes.filter(
+        (n) => !nodeIdsToDelete.includes(n.id)
+      );
       const graphNodes = remainingNodes.map((n) => n.data as GraphNode);
 
       // Verificar cada nodo que se va a eliminar
@@ -1403,9 +1410,27 @@ function TournamentEditorInternal({
         );
         if (!validation.isValid) {
           alert(validation.error);
-          return;
+          return { success: false };
         }
       }
+
+      return { success: true };
+    },
+    [nodes]
+  );
+
+  // Eliminar elementos seleccionados
+  const deleteSelectedElements = useCallback(() => {
+    if (!editable) return;
+
+    // Procesar selección múltiple si hay elementos seleccionados
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+      const nodesToDelete = nodes.filter((n) => selectedNodes.includes(n.id));
+      const edgesToDelete = edges.filter((e) => selectedEdges.includes(e.id));
+
+      // Usar función unificada de validación
+      const validationResult = validateNodeDeletion(nodesToDelete);
+      if (!validationResult.success) return;
 
       // También eliminar edges conectados a los nodos que se van a eliminar
       const connectedEdges = edges.filter(
@@ -1444,18 +1469,9 @@ function TournamentEditorInternal({
       const nodeToDelete = nodes.find((n) => n.id === selectedNodeId);
       if (!nodeToDelete) return;
 
-      // Validar que después de eliminar el nodo, el torneo mantenga su estructura mínima
-      const remainingNodes = nodes.filter((n) => n.id !== selectedNodeId);
-      const graphNodes = remainingNodes.map((n) => n.data as GraphNode);
-      const validation = validateTournamentStructure(
-        graphNodes,
-        nodeToDelete.data as GraphNode
-      );
-
-      if (!validation.isValid) {
-        alert(validation.error);
-        return;
-      }
+      // Usar función unificada de validación (array con 1 elemento)
+      const validationResult = validateNodeDeletion([nodeToDelete]);
+      if (!validationResult.success) return;
 
       const connectedEdges = edges.filter(
         (e) => e.source === selectedNodeId || e.target === selectedNodeId
@@ -1500,6 +1516,7 @@ function TournamentEditorInternal({
     nodes,
     edges,
     addToHistory,
+    validateNodeDeletion,
   ]);
 
   // Función para desactivar el menú contextual
@@ -1610,11 +1627,11 @@ function TournamentEditorInternal({
                     onClick={() => addNewNode("sink")}
                     className="px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
                   >
-                    + Sink
+                    + Podio
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Un sink es un nodo de podio o de eliminacion</p>
+                  <p>Agrega un nuevo podio al torneo</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -1681,7 +1698,7 @@ function TournamentEditorInternal({
         fitViewOptions={{ padding: 0.2, minZoom: 0.1, maxZoom: 2 }}
         className="bg-transparent"
         proOptions={{ hideAttribution: true }}
-        deleteKeyCode={editable ? "Delete" : null}
+        deleteKeyCode={null}
         elevateNodesOnSelect={true}
         selectNodesOnDrag={true}
         panOnDrag={[2]}
