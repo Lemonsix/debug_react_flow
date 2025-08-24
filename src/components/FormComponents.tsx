@@ -19,6 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Componente base para inputs con validación
 interface FormFieldProps {
@@ -35,6 +40,7 @@ interface FormFieldProps {
   validate?: (value: string | number) => string | undefined;
   previousValue?: string | number; // Para rollback
   defaultValue?: string | number; // Valor por defecto si no hay valor anterior
+  tooltip?: string; // Tooltip opcional para el label
 }
 
 export function FormField({
@@ -51,6 +57,7 @@ export function FormField({
   validate,
   previousValue,
   defaultValue,
+  tooltip,
 }: FormFieldProps) {
   const [localError, setLocalError] = useState<string | undefined>(error);
   const [localValue, setLocalValue] = useState<string>(value?.toString() || "");
@@ -86,9 +93,22 @@ export function FormField({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <Label className="text-sm font-medium">
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Label className="text-sm font-medium cursor-help">
+              {label} {required && <span className="text-destructive">*</span>}
+            </Label>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <Label className="text-sm font-medium">
+          {label} {required && <span className="text-destructive">*</span>}
+        </Label>
+      )}
 
       {type === "select" && options ? (
         <Select value={value.toString()} onValueChange={(val) => onChange(val)}>
@@ -416,6 +436,7 @@ export function MatchConfigEditor({
           }}
           type="text"
           placeholder="Cantidad de participantes"
+          tooltip="Cantidad de organizaciones a participar en el match"
           required
         />
 

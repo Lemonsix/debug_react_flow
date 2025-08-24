@@ -1625,7 +1625,7 @@ function TournamentEditorInternal({
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => addNewNode("sink")}
-                    className="px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
+                    className="px-3 py-2 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded hover:bg-yellow-100 transition-colors"
                   >
                     + Podio
                   </button>
@@ -1634,27 +1634,6 @@ function TournamentEditorInternal({
                   <p>Agrega un nuevo podio al torneo</p>
                 </TooltipContent>
               </Tooltip>
-            </div>
-
-            {/* Información sobre estructura mínima requerida */}
-            <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-              <div className="font-medium mb-1">
-                Estructura mínima del torneo:
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  Al menos 1 Match
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  Al menos 1 Podio
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  Al menos 1 Eliminación
-                </span>
-              </div>
             </div>
 
             {/* Exportar */}
@@ -1709,6 +1688,8 @@ function TournamentEditorInternal({
         colorMode="dark"
         multiSelectionKeyCode="Shift"
         selectionOnDrag={true}
+        snapToGrid={true}
+        snapGrid={[20, 20]}
       >
         <MiniMap pannable zoomable nodeColor="#6b7280" />
         <Controls />
@@ -1758,21 +1739,6 @@ function TournamentEditorInternal({
           )}
         </div>
       </div>
-
-      {/* Help text for controls */}
-      {editable && (
-        <div className="absolute bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 text-sm text-gray-600 max-w-sm">
-          <div>
-            💡 <strong>Controls:</strong>
-          </div>
-          <div>• Left click + drag: Box select multiple elements</div>
-          <div>• Right click + drag: Pan around the canvas</div>
-          <div>• Ctrl+C: Copy selected elements</div>
-          <div>• Ctrl+V: Paste copied elements</div>
-          <div>• Ctrl+Z/Y: Undo/Redo</div>
-          <div>• Delete: Remove selected elements</div>
-        </div>
-      )}
     </div>
   );
 }

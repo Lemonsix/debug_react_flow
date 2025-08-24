@@ -1,13 +1,20 @@
 "use client";
 
-import React from "react";
-import { ChevronDownIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { ChevronDownIcon } from "lucide-react";
+import React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -15,15 +22,31 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage,
-} from "@/components/ui/form";
-import type { FieldValues, Control, FieldPath } from "react-hook-form";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
+import type { Control, FieldPath, FieldValues } from "react-hook-form";
+
+// Función para generar opciones de tiempo cada 15 minutos
+const generateTimeOptions = () => {
+  const options = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const timeString = `${hour.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")}`;
+      options.push({
+        value: timeString,
+        label: timeString,
+      });
+    }
+  }
+  return options;
+};
 
 interface DateTimePickerProps {
   date?: Date;
@@ -42,6 +65,7 @@ export function DateTimePicker({
   disabled = false,
 }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
+  const timeOptions = generateTimeOptions();
 
   return (
     <div className="flex gap-4">
@@ -84,15 +108,22 @@ export function DateTimePicker({
         <Label htmlFor="time-picker" className="px-1 text-sm font-medium">
           Hora
         </Label>
-        <Input
-          type="time"
-          id="time-picker"
-          step="1"
+        <Select
           value={time || ""}
-          onChange={(e) => onTimeChange?.(e.target.value)}
+          onValueChange={(value) => onTimeChange?.(value)}
           disabled={disabled}
-          className="w-32 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-        />
+        >
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="HH:MM" />
+          </SelectTrigger>
+          <SelectContent>
+            {timeOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
@@ -120,6 +151,7 @@ export function FormDateTimePicker<T extends FieldValues>({
   className,
 }: FormDateTimePickerProps<T>) {
   const [dateOpen, setDateOpen] = React.useState(false);
+  const timeOptions = generateTimeOptions();
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -181,14 +213,22 @@ export function FormDateTimePicker<T extends FieldValues>({
             <FormItem className="flex flex-col gap-2">
               <FormLabel className="px-1 text-sm font-medium">Hora</FormLabel>
               <FormControl>
-                <Input
-                  type="time"
-                  step="1"
-                  {...field}
+                <Select
                   value={field.value || ""}
+                  onValueChange={field.onChange}
                   disabled={disabled}
-                  className="w-32 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
-                />
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Seleccionar hora" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -151,7 +151,7 @@ export default function EditableEdge({
     const currentCondition = edgeData?.condition || condition;
 
     if (currentCondition?.field === "default" || isDefault) {
-      return "Los participantes que no cumplan con las otras condiciones del match irán por este flujo";
+      return "Los participantes que no cumplan con las otras condiciones del match irán por este flujo. Recomendado para derrotas";
     }
 
     if (!currentCondition) {
