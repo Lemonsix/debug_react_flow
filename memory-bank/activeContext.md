@@ -58,6 +58,25 @@ Se implementó un sistema completo de gestión de nodos podio con auto-increment
 - **Validación con Zod**: Schema de validación tipado y robusto
 - **UX mejorada**: Feedback visual inmediato y consistente con el resto de la aplicación
 
+#### ✅ Lógica de Default Exclusivo para Edges (2024-12-30 - ARREGLO CRÍTICO)
+Se implementó una lógica robusta para garantizar que solo haya un edge default por nodo en todo momento:
+
+**🔄 Cambio Manual a Default:**
+- **Exclusividad automática**: Al seleccionar "default" en cualquier edge, todos los otros edges del mismo nodo automáticamente se cambian a condiciones regulares
+- **Actualización sincronizada**: Los otros edges pasan de "default" a "points >= 0" automáticamente
+- **Feedback inmediato**: Cambios visibles instantáneamente en la UI
+
+**🔄 Cambio de Default a Condición:**
+- **Auto-promoción**: Al cambiar un edge default a otra condición, automáticamente se promociona otro edge del mismo nodo a default
+- **Selección inteligente**: Prioriza el edge más antiguo (por timestamp) para mantener consistencia
+- **Garantía de default**: Siempre habrá exactamente un edge default por nodo source
+
+**⚙️ Implementación Técnica:**
+- **handleEdgeConditionUpdate mejorado**: Maneja ambos escenarios (becoming/stopping default)
+- **getDefaultEdgeForNode actualizado**: Prioriza edges marcados explícitamente como default
+- **validateDefaultEdges robusto**: Validación inteligente que respeta elecciones manuales del usuario
+- **Sincronización completa**: Estados de edges sincronizados en tiempo real
+
 #### ✅ Botón de Edición Arreglado
 Se corrigió un problema donde el botón de edición no aparecía en nodos cuando no estaban en modo edición. El problema era una condición lógica incorrecta que dependía de `data.editable` en lugar de verificar la disponibilidad del callback `onStartEditing`.
 

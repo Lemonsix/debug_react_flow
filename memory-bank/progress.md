@@ -185,6 +185,37 @@ Esta funcionalidad revoluciona la experiencia de diseño de torneos, implementan
 - **Feedback Visual Claro**: Mensajes de error específicos y accionables
 - **Integración Perfecta**: Misma UX que el resto de componentes shadcn
 
+#### ✅ Sistema de Default Exclusivo para Edges (2024-12-30 - ARREGLO CRÍTICO COMPLETADO)
+**Solución definitiva al problema de múltiples edges default por nodo:**
+
+**🚨 Problema Resuelto:**
+- **ANTES**: Era posible tener múltiples edges marcados como "default" desde el mismo nodo
+- **DESPUÉS**: Solo puede haber exactamente un edge default por nodo source en todo momento
+
+**🎯 Funcionalidades Implementadas:**
+- **Exclusividad Automática**: Seleccionar "default" en un edge → otros edges del mismo nodo se vuelven regulares automáticamente
+- **Auto-Promoción Inteligente**: Cambiar edge default a condición → otro edge se promociona a default automáticamente
+- **Sincronización Bidireccional**: Funciona en ambas direcciones (becoming default / stopping being default)
+- **Preservación de UX**: Sin interrupciones en el flujo de trabajo del usuario
+
+**📁 Archivos Modificados:**
+- `src/TournamentEditor.tsx` - ✅ `handleEdgeConditionUpdate()` completamente reescrito para manejar exclusividad
+- `src/utils/edgeLogic.ts` - ✅ `getDefaultEdgeForNode()` y `validateDefaultEdges()` mejorados
+
+**⚙️ Lógica Técnica:**
+1. **Detección de Cambios**: Sistema detecta cuando user selecciona/deselecciona "default"
+2. **Actualización Cascada**: Cambios se propagan automáticamente a todos los edges del mismo nodo
+3. **Validación Inteligente**: Algoritmo garantiza siempre exactamente un default por nodo
+4. **Timestamp Fallback**: Si no hay default explícito, usa el edge más antiguo por timestamp
+
+**✅ Casos de Uso Cubiertos:**
+- Edge A es default → User hace Edge B default → Edge A se vuelve "points >= 0" automáticamente
+- Edge A es default → User cambia Edge A a "points >= 5" → Edge B se vuelve default automáticamente  
+- Nodo nuevo con múltiples edges → Primer edge automáticamente default
+- Import de datos → Validación automática asegura consistencia
+
+Esta implementación resuelve completamente el problema reportado y garantiza la consistencia del sistema de switch en todo momento.
+
 #### ✅ Handles de Conexión Siempre Visibles
 - Los handles (puntos de conexión ⚪) ahora son permanentemente visibles
 - No requiere modo edición para conectar nodos manualmente

@@ -10,22 +10,34 @@ export interface EdgeSwitchLogic {
 
 /**
  * Determina qué edge debe ser el default para un nodo
- * El primer edge (por orden de creación) debe ser default
+ * Prioriza edges marcados como default, luego el primer edge por orden de creación
  */
 export function getDefaultEdgeForNode(
   nodeId: string,
   allEdges: Edge[]
 ): string | null {
-  const nodeEdges = allEdges
-    .filter((edge) => edge.source === nodeId)
-    .sort((a, b) => {
-      // Ordenar por timestamp de creación o ID
-      const timestampA = extractTimestamp(a.id);
-      const timestampB = extractTimestamp(b.id);
-      return timestampA - timestampB;
-    });
+  const nodeEdges = allEdges.filter((edge) => edge.source === nodeId);
 
-  return nodeEdges.length > 0 ? nodeEdges[0].id : null;
+  if (nodeEdges.length === 0) return null;
+
+  // Buscar primero un edge que esté explícitamente marcado como default
+  const explicitDefault = nodeEdges.find((edge) => {
+    const edgeData = edge.data as GraphEdge;
+    return edgeData?.isDefault === true;
+  });
+
+  if (explicitDefault) {
+    return explicitDefault.id;
+  }
+
+  // Si no hay ninguno marcado explícitamente, usar el primero por timestamp
+  const sortedEdges = nodeEdges.sort((a, b) => {
+    const timestampA = extractTimestamp(a.id);
+    const timestampB = extractTimestamp(b.id);
+    return timestampA - timestampB;
+  });
+
+  return sortedEdges[0].id;
 }
 
 /**
@@ -135,20 +147,51 @@ export function validateDefaultEdges(edges: Edge[]): void {
 
       const edgeData = firstEdge.data as GraphEdge;
       edgeData.isDefault = true;
+      // También asegurar que su condición sea "default"
+      edgeData.condition = {
+        field: "default" as const,
+        operator: ">=" as const,
+        value: 0,
+      };
     }
 
-    // Si hay múltiples default edges, mantener solo el primero
+    // Si hay múltiples default edges, mantener solo el último modificado y desmarcar el resto
     if (defaultEdges.length > 1) {
-      const sortedDefaults = defaultEdges.sort((a, b) => {
-        const timestampA = extractTimestamp(a.id);
-        const timestampB = extractTimestamp(b.id);
-        return timestampA - timestampB;
+      // Buscar el que tiene condición field === "default" más reciente
+      const explicitDefaults = defaultEdges.filter((edge) => {
+        const edgeData = edge.data as GraphEdge;
+        return edgeData?.condition?.field === "default";
       });
 
-      // Desmarcar todos excepto el primero
-      sortedDefaults.slice(1).forEach((edge) => {
-        const edgeData = edge.data as GraphEdge;
-        edgeData.isDefault = false;
+      let edgeToKeep: Edge;
+      if (explicitDefaults.length > 0) {
+        // Si hay edges con field === "default", mantener el más reciente por timestamp
+        edgeToKeep = explicitDefaults.sort((a, b) => {
+          const timestampA = extractTimestamp(a.id);
+          const timestampB = extractTimestamp(b.id);
+          return timestampB - timestampA; // Orden descendente para obtener el más reciente
+        })[0];
+      } else {
+        // Si ninguno tiene field === "default", mantener el primero por timestamp
+        edgeToKeep = defaultEdges.sort((a, b) => {
+          const timestampA = extractTimestamp(a.id);
+          const timestampB = extractTimestamp(b.id);
+          return timestampA - timestampB;
+        })[0];
+      }
+
+      // Desmarcar todos excepto el que se mantiene
+      defaultEdges.forEach((edge) => {
+        if (edge.id !== edgeToKeep.id) {
+          const edgeData = edge.data as GraphEdge;
+          edgeData.isDefault = false;
+          // Cambiar su condición a algo que no sea default
+          edgeData.condition = {
+            field: "points" as const,
+            operator: ">=" as const,
+            value: 0,
+          };
+        }
       });
     }
   });

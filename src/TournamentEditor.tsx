@@ -373,19 +373,94 @@ function TournamentEditorInternal({
   // Función para actualizar condiciones de edges
   const handleEdgeConditionUpdate = useCallback(
     (edgeId: string, condition: EdgeCondition) => {
-      setEdges((edges) =>
-        edges.map((edge) =>
-          edge.id === edgeId
-            ? {
-                ...edge,
-                data: {
-                  ...edge.data,
-                  condition,
+      setEdges((edges) => {
+        // Encontrar el edge que se está modificando
+        const targetEdge = edges.find((e) => e.id === edgeId);
+        if (!targetEdge) return edges;
+
+        const sourceNodeId = targetEdge.source;
+        const isBecomingDefault = condition.field === "default";
+        const wasDefault = (targetEdge.data as GraphEdge)?.isDefault === true;
+        const isStoppingBeingDefault = wasDefault && !isBecomingDefault;
+
+        const updatedEdges = edges.map((edge) => {
+          if (edge.id === edgeId) {
+            // Actualizar el edge objetivo
+            return {
+              ...edge,
+              data: {
+                ...edge.data,
+                condition,
+                isDefault: isBecomingDefault,
+                outcome: isBecomingDefault
+                  ? "default"
+                  : `${condition.field} ${condition.operator} ${condition.value}`,
+              },
+            };
+          } else if (edge.source === sourceNodeId && isBecomingDefault) {
+            // Si el edge objetivo se está volviendo default, todos los otros edges del mismo nodo deben dejar de serlo
+            const edgeData = edge.data as GraphEdge;
+            return {
+              ...edge,
+              data: {
+                ...edgeData,
+                isDefault: false,
+                condition: {
+                  field: "points" as const,
+                  operator: ">=" as const,
+                  value: 0,
                 },
+                outcome: "points >= 0",
+              },
+            };
+          }
+          return edge;
+        });
+
+        // Si un edge default deja de serlo, necesitamos asegurar que otro edge del mismo nodo se convierta en default
+        if (isStoppingBeingDefault) {
+          const nodeEdges = updatedEdges.filter(
+            (e) => e.source === sourceNodeId
+          );
+          const hasAnyDefault = nodeEdges.some(
+            (e) => (e.data as GraphEdge)?.isDefault === true
+          );
+
+          if (!hasAnyDefault && nodeEdges.length > 0) {
+            // Hacer default el primer edge (por timestamp) que no sea el que se está modificando
+            const candidateEdge = nodeEdges
+              .filter((e) => e.id !== edgeId)
+              .sort((a, b) => {
+                const timestampA = parseInt(a.id.split("-").pop() || "0");
+                const timestampB = parseInt(b.id.split("-").pop() || "0");
+                return timestampA - timestampB;
+              })[0];
+
+            if (candidateEdge) {
+              const candidateIndex = updatedEdges.findIndex(
+                (e) => e.id === candidateEdge.id
+              );
+              if (candidateIndex !== -1) {
+                updatedEdges[candidateIndex] = {
+                  ...candidateEdge,
+                  data: {
+                    ...candidateEdge.data,
+                    isDefault: true,
+                    condition: {
+                      field: "default" as const,
+                      operator: ">=" as const,
+                      value: 0,
+                    },
+                    outcome: "default",
+                  },
+                };
               }
-            : edge
-        )
-      );
+            }
+          }
+        }
+
+        return updatedEdges;
+      });
 
       // Agregar al historial
       addToHistory("EDIT_EDGE", {
