@@ -44,6 +44,7 @@ import { validateDefaultEdges } from "./utils/edgeLogic";
 import {
   getNextAvailablePodiumPosition,
   validateTournamentStructure,
+  detectCircularDependency,
 } from "./utils/validation";
 
 const NODE_W = 400;
@@ -775,6 +776,21 @@ function TournamentEditorInternal({
   const onConnect = useCallback(
     (params: Connection) => {
       if (!editable || !params.source || !params.target) return;
+
+      // Validar que no se cree una dependencia circular
+      const circularCheck = detectCircularDependency(
+        params.source,
+        params.target,
+        edges
+      );
+
+      if (circularCheck.hasCircle) {
+        alert(
+          circularCheck.error ||
+            "Esta conexión crearía una dependencia circular."
+        );
+        return;
+      }
 
       const newEdgeId = `edge-${Date.now()}`;
 

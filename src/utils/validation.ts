@@ -5,6 +5,7 @@ import type {
   MatchConfiguration,
   GraphNode,
 } from "../types";
+import type { Edge } from "@xyflow/react";
 
 // Validación para formularios de nodo
 export function validateNodeForm(
@@ -248,4 +249,128 @@ export function validateTournamentStructure(
   }
 
   return { isValid: true };
+}
+
+/**
+ * Detecta si agregar un edge crearía una dependencia circular
+ * Utiliza DFS (Depth-First Search) para detectar ciclos en el grafo dirigido
+ */
+export function detectCircularDependency(
+  sourceNodeId: string,
+  targetNodeId: string,
+  existingEdges: Edge[]
+): { hasCircle: boolean; error?: string } {
+  // Si source y target son el mismo nodo, es un ciclo inmediato
+  if (sourceNodeId === targetNodeId) {
+    return {
+      hasCircle: true,
+      error: "No se puede conectar un nodo consigo mismo.",
+    };
+  }
+
+  // Crear un mapa de adyacencia del grafo actual
+  const adjacencyMap = new Map<string, string[]>();
+
+  // Construir el grafo de adyacencia con los edges existentes
+  existingEdges.forEach((edge) => {
+    if (edge.source && edge.target) {
+      if (!adjacencyMap.has(edge.source)) {
+        adjacencyMap.set(edge.source, []);
+      }
+      adjacencyMap.get(edge.source)!.push(edge.target);
+    }
+  });
+
+  // Simular la adición del nuevo edge
+  if (!adjacencyMap.has(sourceNodeId)) {
+    adjacencyMap.set(sourceNodeId, []);
+  }
+  adjacencyMap.get(sourceNodeId)!.push(targetNodeId);
+
+  // Realizar DFS desde el targetNode para ver si puede alcanzar el sourceNode
+  const visited = new Set<string>();
+  const recursionStack = new Set<string>();
+
+  function dfs(nodeId: string): boolean {
+    visited.add(nodeId);
+    recursionStack.add(nodeId);
+
+    const neighbors = adjacencyMap.get(nodeId) || [];
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        if (dfs(neighbor)) {
+          return true; // Ciclo encontrado
+        }
+      } else if (recursionStack.has(neighbor)) {
+        return true; // Ciclo encontrado - back edge
+      }
+    }
+
+    recursionStack.delete(nodeId);
+    return false;
+  }
+
+  // Verificar si existe un ciclo desde el targetNode
+  if (dfs(targetNodeId)) {
+    return {
+      hasCircle: true,
+      error: `Esta conexión crearía una dependencia circular. El nodo de destino ya tiene un camino que lleva de vuelta al nodo de origen.`,
+    };
+  }
+
+  return { hasCircle: false };
+}
+
+/**
+ * Encuentra el camino circular si existe uno
+ * Útil para mostrar información más detallada al usuario
+ */
+export function findCircularPath(
+  sourceNodeId: string,
+  targetNodeId: string,
+  existingEdges: Edge[]
+): string[] | null {
+  // Crear mapa de adyacencia
+  const adjacencyMap = new Map<string, string[]>();
+
+  existingEdges.forEach((edge) => {
+    if (edge.source && edge.target) {
+      if (!adjacencyMap.has(edge.source)) {
+        adjacencyMap.set(edge.source, []);
+      }
+      adjacencyMap.get(edge.source)!.push(edge.target);
+    }
+  });
+
+  // Simular el nuevo edge
+  if (!adjacencyMap.has(sourceNodeId)) {
+    adjacencyMap.set(sourceNodeId, []);
+  }
+  adjacencyMap.get(sourceNodeId)!.push(targetNodeId);
+
+  // DFS para encontrar un camino desde targetNode a sourceNode
+  function findPath(
+    current: string,
+    target: string,
+    path: string[]
+  ): string[] | null {
+    if (current === target) {
+      return [...path, current];
+    }
+
+    const neighbors = adjacencyMap.get(current) || [];
+    for (const neighbor of neighbors) {
+      if (!path.includes(neighbor)) {
+        // Evitar bucles infinitos
+        const result = findPath(neighbor, target, [...path, current]);
+        if (result) {
+          return result;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  return findPath(targetNodeId, sourceNodeId, []);
 }
