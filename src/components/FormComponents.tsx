@@ -8,7 +8,16 @@ import type {
   SinkConfiguration,
   SinkType,
 } from "../types";
-import { TimestampPicker } from "./Timepicker";
+import { DateTimePicker } from "./DateTimePicker";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Componente base para inputs con validación
 interface FormFieldProps {
@@ -34,37 +43,27 @@ export function FormField({
   error,
   required = false,
 }: FormFieldProps) {
-  const baseInputClasses = `
-    ${className} w-full px-3 py-2 text-sm border rounded-md transition-colors
-    ${
-      error
-        ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-200"
-        : "border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-200"
-    }
-    focus:outline-none focus:ring-2
-  `;
-
   return (
-    <div className="space-y-1">
-      <label className="block text-xs font-medium text-gray-700">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
+    <div className={`space-y-2 ${className}`}>
+      <Label className="text-sm font-medium">
+        {label} {required && <span className="text-destructive">*</span>}
+      </Label>
 
       {type === "select" && options ? (
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={baseInputClasses}
-        >
-          <option value="">Select {label.toLowerCase()}</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <Select value={value.toString()} onValueChange={(val) => onChange(val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={`Seleccionar ${label.toLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value.toString()}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : (
-        <input
+        <Input
           type={type}
           value={value}
           onChange={(e) =>
@@ -73,11 +72,11 @@ export function FormField({
             )
           }
           placeholder={placeholder}
-          className={baseInputClasses}
+          className={error ? "border-destructive" : ""}
         />
       )}
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
@@ -102,10 +101,7 @@ export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
   };
 
   return (
-    <div className="space-y-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-      <h4 className="text-sm font-semibold text-purple-800">
-        Configuración de Sink
-      </h4>
+    <div className="space-y-3 p-3 text-foreground border border-border rounded-lg">
       <div className="flex flex-col gap-2">
         <FormField
           label="Tipo de Resultado"
@@ -163,8 +159,8 @@ export function EdgeConditionEditor({
   };
 
   return (
-    <div className="space-y-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-      <h4 className="text-sm font-semibold text-blue-800">Edge Condition</h4>
+    <div className="space-y-3 p-3 border border-border rounded-lg">
+      <h4 className="text-sm font-semibold text-foreground">Edge Condition</h4>
 
       <div className="grid grid-cols-3 gap-2">
         <FormField
@@ -199,7 +195,7 @@ export function EdgeConditionEditor({
         />
       </div>
 
-      <div className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
+      <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
         <strong>Preview:</strong> {condition.field} {condition.operator}{" "}
         {condition.value}
       </div>
@@ -267,7 +263,7 @@ export function MatchConfigEditor({
   );
 
   return (
-    <div className="space-y-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+    <div className="space-y-3 p-3 text-foreground border border-border rounded-lg">
       <div className="flex flex-col gap-2">
         <FormField
           label="Participantes"
@@ -288,47 +284,26 @@ export function MatchConfigEditor({
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-700">
-          Fecha y Hora Programada
-        </label>
-        <TimestampPicker
-          value={
-            config.scheduledDate && config.scheduledTime
-              ? new Date(
-                  `${config.scheduledDate.toISOString().split("T")[0]}T${
-                    config.scheduledTime
-                  }`
-                )
-              : config.scheduledDate
-          }
-          onChange={(dateString: string | undefined) => {
-            if (dateString) {
-              const date = new Date(dateString);
-
-              // Extraer la hora en formato HH:mm
-              const hours = date.getHours().toString().padStart(2, "0");
-              const minutes = date.getMinutes().toString().padStart(2, "0");
-
-              // Actualizar ambos campos en una sola llamada para evitar sobrescribir
-              const updatedConfig = {
-                ...config,
-                scheduledDate: date,
-                scheduledTime: `${hours}:${minutes}`,
-              };
-              onChange(updatedConfig);
-            } else {
-              const updatedConfig = {
-                ...config,
-                scheduledDate: undefined,
-                scheduledTime: undefined,
-              };
-              onChange(updatedConfig);
-            }
+      <div className="space-y-3">
+        <DateTimePicker
+          date={config.scheduledDate}
+          time={config.scheduledTime}
+          onDateChange={(date) => {
+            const updatedConfig = {
+              ...config,
+              scheduledDate: date,
+              // Si se limpia la fecha, también limpiar la hora
+              ...(date === undefined && { scheduledTime: undefined }),
+            };
+            onChange(updatedConfig);
           }}
-          includeTime={true}
-          timeFormat="24"
-          className="w-full"
+          onTimeChange={(time) => {
+            const updatedConfig = {
+              ...config,
+              scheduledTime: time || undefined,
+            };
+            onChange(updatedConfig);
+          }}
         />
       </div>
     </div>

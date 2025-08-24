@@ -134,7 +134,9 @@ export default function EditableNode({
   return (
     <div
       className={`
-        flex flex-row bg-white border-2 ${config.border} rounded-lg shadow-sm
+        flex flex-row bg-background border-2 ${
+          config.border
+        } rounded-lg shadow-sm
         hover:shadow-md transition-all duration-200
         ${isEditing ? "ring-2 ring-blue-400 ring-opacity-50" : ""}
         ${
@@ -266,8 +268,8 @@ export default function EditableNode({
       {/* Información para nodos sink */}
       {formData.type === "sink" && !isEditing && (
         <div className="p-1">
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 text-center">
-            <div className="text-purple-700 text-sm font-semibold mb-1">
+          <div className="bg-muted border border-border rounded-lg p-2 text-center">
+            <div className="text-foreground text-sm font-semibold mb-1">
               {formData.sinkConfig?.sinkType === "podium"
                 ? "🏆 Podio"
                 : formData.sinkConfig?.sinkType === "disqualification"

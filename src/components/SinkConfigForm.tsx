@@ -81,8 +81,8 @@ export function SinkConfigForm({
   }, [form, onChange]);
 
   return (
-    <div className="space-y-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-      <h4 className="text-sm font-semibold text-purple-800">
+    <div className="space-y-3 p-3 text-foreground border border-border rounded-lg">
+      <h4 className="text-sm font-semibold text-foreground">
         Configuración de Sink
       </h4>
 
