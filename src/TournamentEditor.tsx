@@ -46,6 +46,7 @@ import {
   validateTournamentStructure,
   detectCircularDependency,
   validateSinkDeletion,
+  debugCircularDependency,
 } from "./utils/validation";
 
 const NODE_W = 400;
@@ -820,10 +821,67 @@ function TournamentEditorInternal({
       );
 
       if (circularCheck.hasCircle) {
+        // Mostrar alerta al usuario
         alert(
           circularCheck.error ||
             "Esta conexión crearía una dependencia circular."
         );
+
+        // Debug detallado en consola
+        if (circularCheck.circularPath) {
+          console.log("🚨 DEPENDENCIA CIRCULAR DETECTADA 🚨");
+          console.log("=====================================");
+          console.log(circularCheck.circularPath.details);
+          console.log("=====================================");
+
+          // También mostrar el camino en formato más legible
+          console.log("🔍 CAMINO CIRCULAR:");
+          console.log("   Nodos:", circularCheck.circularPath.path);
+          console.log(
+            "   Ciclo completo:",
+            [...circularCheck.circularPath.path, params.source].join(" → ")
+          );
+
+          // Mostrar información de los nodos involucrados
+          console.log("📊 INFORMACIÓN DE NODOS:");
+          const nodesInCycle = [
+            ...circularCheck.circularPath.path,
+            params.source,
+          ];
+          nodesInCycle.forEach((nodeId, index) => {
+            const node = nodes.find((n) => n.id === nodeId);
+            if (node) {
+              console.log(
+                `   ${index + 1}. ${nodeId} (${
+                  (node.data as { type?: string })?.type || "unknown"
+                })`
+              );
+            }
+          });
+
+          // Mostrar información de edges existentes
+          console.log("🔗 EDGES EXISTENTES EN EL CICLO:");
+          for (let i = 0; i < circularCheck.circularPath.path.length - 1; i++) {
+            const from = circularCheck.circularPath.path[i];
+            const to = circularCheck.circularPath.path[i + 1];
+            const edge = edges.find(
+              (e) => e.source === from && e.target === to
+            );
+            if (edge) {
+              console.log(`   ${from} → ${to}: Edge ID ${edge.id}`);
+            }
+          }
+
+          console.log(
+            "💡 SUGERENCIA: Revisa la lógica de tu torneo. Probablemente quieras:"
+          );
+          console.log(
+            "   1. Eliminar alguna conexión existente que forme el ciclo"
+          );
+          console.log("   2. Reorganizar la estructura del torneo");
+          console.log("   3. Verificar que la lógica de flujo sea correcta");
+        }
+
         return;
       }
 
@@ -1645,6 +1703,42 @@ function TournamentEditorInternal({
     a.click();
     URL.revokeObjectURL(url);
   }, [graph, nodes, edges, onGraphChange]);
+
+  // Hacer disponible la función de debug globalmente para uso en consola
+  useEffect(() => {
+    // Extender la interfaz de Window para debugging
+    const extendedWindow = window as typeof window & {
+      debugCircularDependency?: (sourceId: string, targetId: string) => void;
+      getGraphInfo?: () => void;
+    };
+
+    extendedWindow.debugCircularDependency = (
+      sourceId: string,
+      targetId: string
+    ) => {
+      debugCircularDependency(sourceId, targetId, edges, nodes);
+    };
+
+    extendedWindow.getGraphInfo = () => {
+      console.log("📊 INFORMACIÓN DEL GRAFO ACTUAL:");
+      console.log(
+        "Nodos:",
+        nodes.map((n) => ({
+          id: n.id,
+          type: (n.data as { type?: string })?.type,
+        }))
+      );
+      console.log(
+        "Edges:",
+        edges.map((e) => ({ id: e.id, source: e.source, target: e.target }))
+      );
+    };
+
+    return () => {
+      delete extendedWindow.debugCircularDependency;
+      delete extendedWindow.getGraphInfo;
+    };
+  }, [edges, nodes]);
 
   return (
     <div className="h-[80vh] w-full rounded-lg border border-gray-200 bg-gray-50 relative">

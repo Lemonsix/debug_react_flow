@@ -260,7 +260,11 @@ export function detectCircularDependency(
   targetNodeId: string,
   existingEdges: Edge[],
   allNodes?: Node[]
-): { hasCircle: boolean; error?: string } {
+): {
+  hasCircle: boolean;
+  error?: string;
+  circularPath?: { path: string[]; details: string };
+} {
   // Si source y target son el mismo nodo, es un ciclo inmediato
   if (sourceNodeId === targetNodeId) {
     return {
@@ -273,7 +277,7 @@ export function detectCircularDependency(
   // (no tienen handles de salida, por lo que nunca pueden ser source de otro edge)
   if (allNodes) {
     const targetNode = allNodes.find((node) => node.id === targetNodeId);
-    if (targetNode && (targetNode.data as any)?.type === "sink") {
+    if (targetNode && (targetNode.data as { type?: string })?.type === "sink") {
       return { hasCircle: false }; // Los nodos sink no pueden crear ciclos
     }
   }
@@ -322,9 +326,18 @@ export function detectCircularDependency(
 
   // Verificar si existe un ciclo desde el targetNode
   if (dfs(targetNodeId)) {
+    // Encontrar el camino circular detallado
+    const circularPath = findCircularPath(
+      sourceNodeId,
+      targetNodeId,
+      existingEdges,
+      allNodes
+    );
+
     return {
       hasCircle: true,
       error: `Esta conexión crearía una dependencia circular. El nodo de destino ya tiene un camino que lleva de vuelta al nodo de origen.`,
+      circularPath,
     };
   }
 
@@ -340,17 +353,18 @@ export function findCircularPath(
   targetNodeId: string,
   existingEdges: Edge[],
   allNodes?: Node[]
-): string[] | null {
+): { path: string[]; details: string } | undefined {
   // Si el target es un nodo sink, no puede crear ciclos
   if (allNodes) {
     const targetNode = allNodes.find((node) => node.id === targetNodeId);
-    if (targetNode && (targetNode.data as any)?.type === "sink") {
-      return null; // Los nodos sink no pueden crear ciclos
+    if (targetNode && (targetNode.data as { type?: string })?.type === "sink") {
+      return undefined; // Los nodos sink no pueden crear ciclos
     }
   }
 
   // Crear mapa de adyacencia
   const adjacencyMap = new Map<string, string[]>();
+  const edgeMap = new Map<string, Edge>();
 
   existingEdges.forEach((edge) => {
     if (edge.source && edge.target) {
@@ -358,6 +372,7 @@ export function findCircularPath(
         adjacencyMap.set(edge.source, []);
       }
       adjacencyMap.get(edge.source)!.push(edge.target);
+      edgeMap.set(`${edge.source}->${edge.target}`, edge);
     }
   });
 
@@ -391,15 +406,168 @@ export function findCircularPath(
     return null;
   }
 
-  return findPath(targetNodeId, sourceNodeId, []);
+  const circularPath = findPath(targetNodeId, sourceNodeId, []);
+
+  if (!circularPath) {
+    return undefined;
+  }
+
+  // Generar detalles del camino circular
+  let details = "CAMINO CIRCULAR DETECTADO:\n";
+  details += "========================\n\n";
+
+  // Agregar el nuevo edge que se está intentando crear
+  details += `🔄 NUEVA CONEXIÓN (que causaría el ciclo):\n`;
+  details += `   ${sourceNodeId} → ${targetNodeId}\n\n`;
+
+  // Agregar el camino existente que forma el ciclo
+  details += `🔄 CAMINO EXISTENTE (que forma el ciclo):\n`;
+  for (let i = 0; i < circularPath.length - 1; i++) {
+    const from = circularPath[i];
+    const to = circularPath[i + 1];
+    const edge = edgeMap.get(`${from}->${to}`);
+
+    if (edge) {
+      details += `   ${from} → ${to} (Edge ID: ${edge.id})\n`;
+    } else {
+      details += `   ${from} → ${to}\n`;
+    }
+  }
+
+  // Agregar el cierre del ciclo
+  details += `   ${
+    circularPath[circularPath.length - 1]
+  } → ${sourceNodeId} (NUEVA CONEXIÓN)\n\n`;
+
+  // Agregar información de nodos
+  details += `📋 DETALLE DE NODOS EN EL CICLO:\n`;
+  details += `   ${circularPath.join(" → ")} → ${sourceNodeId}\n\n`;
+
+  // Agregar información de edges
+  details += `🔗 EDGES INVOLUCRADOS:\n`;
+  for (let i = 0; i < circularPath.length - 1; i++) {
+    const from = circularPath[i];
+    const to = circularPath[i + 1];
+    const edge = edgeMap.get(`${from}->${to}`);
+
+    if (edge) {
+      details += `   Edge ${edge.id}: ${from} → ${to}\n`;
+    }
+  }
+  details += `   Edge NUEVO: ${sourceNodeId} → ${targetNodeId}\n\n`;
+
+  // Agregar resumen
+  details += `💡 RESUMEN:\n`;
+  details += `   El nodo ${targetNodeId} ya tiene un camino que llega a ${sourceNodeId}.\n`;
+  details += `   Al conectar ${sourceNodeId} → ${targetNodeId}, se crearía un ciclo.\n`;
+  details += `   Longitud del ciclo: ${circularPath.length + 1} nodos\n`;
+
+  return {
+    path: circularPath,
+    details,
+  };
+}
+
+/**
+ * Función de utilidad para debuggear dependencias circulares
+ * Útil para llamar desde la consola del navegador o desde el código
+ */
+export function debugCircularDependency(
+  sourceNodeId: string,
+  targetNodeId: string,
+  existingEdges: Edge[],
+  allNodes?: Node[]
+): void {
+  console.log("🔍 DEBUGGING DEPENDENCIA CIRCULAR");
+  console.log("==================================");
+  console.log(`Intentando conectar: ${sourceNodeId} → ${targetNodeId}`);
+  console.log(`Total de edges existentes: ${existingEdges.length}`);
+  console.log(`Total de nodos: ${allNodes?.length || "N/A"}`);
+
+  // Verificar si es el mismo nodo
+  if (sourceNodeId === targetNodeId) {
+    console.log("❌ ERROR: No se puede conectar un nodo consigo mismo");
+    return;
+  }
+
+  // Verificar si el target es un sink
+  if (allNodes) {
+    const targetNode = allNodes.find((node) => node.id === targetNodeId);
+    if (targetNode && (targetNode.data as { type?: string })?.type === "sink") {
+      console.log("✅ SEGURO: Los nodos sink no pueden crear ciclos");
+      return;
+    }
+  }
+
+  // Buscar el camino circular
+  const circularPath = findCircularPath(
+    sourceNodeId,
+    targetNodeId,
+    existingEdges,
+    allNodes
+  );
+
+  if (circularPath) {
+    console.log("🚨 DEPENDENCIA CIRCULAR ENCONTRADA!");
+    console.log(circularPath.details);
+
+    // Análisis adicional
+    console.log("\n🔍 ANÁLISIS DETALLADO:");
+    console.log("   Longitud del ciclo:", circularPath.path.length + 1);
+    console.log(
+      "   Nodos únicos en el ciclo:",
+      new Set([...circularPath.path, sourceNodeId]).size
+    );
+
+    // Verificar si hay nodos duplicados en el ciclo
+    const cycleNodes = [...circularPath.path, sourceNodeId];
+    const duplicates = cycleNodes.filter(
+      (item, index) => cycleNodes.indexOf(item) !== index
+    );
+    if (duplicates.length > 0) {
+      console.log("   ⚠️  Nodos duplicados en el ciclo:", duplicates);
+    }
+  } else {
+    console.log("✅ SEGURO: No se detectaron dependencias circulares");
+
+    // Mostrar el grafo actual para referencia
+    console.log("\n📊 GRAFO ACTUAL:");
+    const adjacencyMap = new Map<string, string[]>();
+    existingEdges.forEach((edge) => {
+      if (edge.source && edge.target) {
+        if (!adjacencyMap.has(edge.source)) {
+          adjacencyMap.set(edge.source, []);
+        }
+        adjacencyMap.get(edge.source)!.push(edge.target);
+      }
+    });
+
+    adjacencyMap.forEach((targets, source) => {
+      console.log(`   ${source} → [${targets.join(", ")}]`);
+    });
+  }
+
+  console.log("==================================");
 }
 
 /**
  * Valida si se pueden eliminar los nodos sink seleccionados según las reglas específicas
  */
 export function validateSinkDeletion(
-  nodesToDelete: { id: string; data: any }[],
-  allNodes: { id: string; data: any }[]
+  nodesToDelete: {
+    id: string;
+    data: {
+      type?: string;
+      sinkConfig?: { sinkType?: string; position?: number };
+    };
+  }[],
+  allNodes: {
+    id: string;
+    data: {
+      type?: string;
+      sinkConfig?: { sinkType?: string; position?: number };
+    };
+  }[]
 ): { isValid: boolean; error?: string } {
   // Identificar nodos sink en la selección
   const sinkNodesToDelete = nodesToDelete.filter(
