@@ -34,6 +34,7 @@ import type {
 } from "./types";
 import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
+import { validateDefaultEdges } from "./utils/edgeLogic";
 
 const NODE_W = 400;
 const NODE_H = 280;
@@ -133,6 +134,11 @@ function TournamentEditorInternal({
           markerEnd: { type: MarkerType.ArrowClosed },
         })
       );
+
+    // Validar y asegurar que la lógica de default esté correcta
+    if (editable) {
+      validateDefaultEdges(rfEdges);
+    }
 
     // Aplicar layout automático si no hay posiciones
     if (
@@ -262,6 +268,12 @@ function TournamentEditorInternal({
               ne.source === closeEdge.source && ne.target === closeEdge.target
           )
         ) {
+          // Determinar si este sería el primer edge del nodo (y por tanto default)
+          const existingEdgesFromSource = nextEdges.filter(
+            (e) => e.source === closeEdge.source
+          );
+          const isFirstEdge = existingEdgesFromSource.length === 0;
+
           const tempEdge: Edge = {
             id: closeEdge.id,
             source: closeEdge.source,
@@ -277,10 +289,11 @@ function TournamentEditorInternal({
               id: closeEdge.id,
               fromNode: closeEdge.source,
               toNode: closeEdge.target,
-              outcome: "points >= 0",
+              outcome: isFirstEdge ? "default" : "points >= 0",
               editable: false,
+              isDefault: isFirstEdge,
               condition: {
-                field: "points" as const,
+                field: isFirstEdge ? ("default" as const) : ("points" as const),
                 operator: ">=" as const,
                 value: 0,
               },
@@ -312,6 +325,12 @@ function TournamentEditorInternal({
               ne.source === closeEdge.source && ne.target === closeEdge.target
           )
         ) {
+          // Determinar si este será el primer edge del nodo (y por tanto default)
+          const existingEdgesFromSource = nextEdges.filter(
+            (e) => e.source === closeEdge.source
+          );
+          const isFirstEdge = existingEdgesFromSource.length === 0;
+
           const newEdge: Edge = {
             id: `edge-${Date.now()}`,
             source: closeEdge.source,
@@ -321,10 +340,11 @@ function TournamentEditorInternal({
               id: `edge-${Date.now()}`,
               fromNode: closeEdge.source,
               toNode: closeEdge.target,
-              outcome: "points >= 0",
+              outcome: isFirstEdge ? "default" : "points >= 0",
               editable: true,
+              isDefault: isFirstEdge,
               condition: {
-                field: "points" as const,
+                field: isFirstEdge ? ("default" as const) : ("points" as const),
                 operator: ">=" as const,
                 value: 0,
               },
@@ -332,6 +352,9 @@ function TournamentEditorInternal({
             markerEnd: { type: MarkerType.ArrowClosed },
           };
           nextEdges.push(newEdge);
+
+          // Validar que la lógica de default sea correcta
+          validateDefaultEdges(nextEdges);
 
           // Agregar al historial
           addToHistory("ADD_EDGE", {
@@ -429,19 +452,35 @@ function TournamentEditorInternal({
 
   const edgeTypes = useMemo(
     () => ({
-      editable: (props: EdgeProps) => (
-        <EditableEdge
-          key={props.id}
-          {...props}
-          onConditionUpdate={handleEdgeConditionUpdate}
-          isEditing={isCurrentlyEditing("edge", props.id)}
-          onStartEditing={() => startEditing("edge", props.id)}
-          onStopEditing={stopEditing}
-        />
-      ),
+      editable: (props: EdgeProps) => {
+        // Encontrar el nodo de destino para determinar el coloreado
+        const targetNode = nodes.find((n) => n.id === props.target)?.data as
+          | GraphNode
+          | undefined;
+
+        return (
+          <EditableEdge
+            key={props.id}
+            {...props}
+            onConditionUpdate={handleEdgeConditionUpdate}
+            isEditing={isCurrentlyEditing("edge", props.id)}
+            onStartEditing={() => startEditing("edge", props.id)}
+            onStopEditing={stopEditing}
+            allEdges={edges}
+            targetNode={targetNode}
+          />
+        );
+      },
       simple: SimpleEdge,
     }),
-    [handleEdgeConditionUpdate, isCurrentlyEditing, startEditing, stopEditing]
+    [
+      handleEdgeConditionUpdate,
+      isCurrentlyEditing,
+      startEditing,
+      stopEditing,
+      edges,
+      nodes,
+    ]
   );
 
   // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
@@ -508,6 +547,13 @@ function TournamentEditorInternal({
       if (!editable || !params.source || !params.target) return;
 
       const newEdgeId = `edge-${Date.now()}`;
+
+      // Determinar si este será el primer edge del nodo (y por tanto default)
+      const existingEdgesFromSource = edges.filter(
+        (e) => e.source === params.source
+      );
+      const isFirstEdge = existingEdgesFromSource.length === 0;
+
       const newEdge: Edge = {
         id: newEdgeId,
         source: params.source,
@@ -518,10 +564,11 @@ function TournamentEditorInternal({
           id: newEdgeId,
           fromNode: params.source,
           toNode: params.target,
-          outcome: "points >= 0",
+          outcome: isFirstEdge ? "default" : "points >= 0",
           editable: true,
+          isDefault: isFirstEdge,
           condition: {
-            field: "points" as const,
+            field: isFirstEdge ? ("default" as const) : ("points" as const),
             operator: ">=" as const,
             value: 0,
           },
@@ -531,7 +578,12 @@ function TournamentEditorInternal({
       };
 
       // Usar la utilidad addEdge de React Flow para mejor rendimiento
-      setEdges((eds) => addEdge(newEdge, eds));
+      setEdges((eds) => {
+        const newEdges = addEdge(newEdge, eds);
+        // Validar que la lógica de default sea correcta
+        validateDefaultEdges(newEdges);
+        return newEdges;
+      });
 
       // Agregar al historial
       addToHistory("ADD_EDGE", {
@@ -539,7 +591,7 @@ function TournamentEditorInternal({
         afterState: newEdge,
       });
     },
-    [editable, setEdges, addToHistory]
+    [editable, setEdges, addToHistory, edges]
   );
 
   // Agregar nuevo nodo

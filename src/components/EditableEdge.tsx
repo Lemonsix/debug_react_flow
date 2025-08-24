@@ -1,13 +1,20 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
+  type Edge,
 } from "@xyflow/react";
-import type { GraphEdge, EdgeCondition, ConditionOperator } from "../types";
+import type {
+  GraphEdge,
+  EdgeCondition,
+  ConditionOperator,
+  GraphNode,
+} from "../types";
 import { EditToggle } from "./FormComponents";
 import { validateEdgeCondition } from "../utils/validation";
+import { getEdgeSwitchLogic } from "../utils/edgeLogic";
 
 interface EditableEdgeData extends GraphEdge {
   label?: string;
@@ -19,6 +26,9 @@ interface EditableEdgeProps extends EdgeProps {
   isEditing?: boolean;
   onStartEditing?: () => void;
   onStopEditing?: () => void;
+  // Nuevas props para lógica de switch
+  allEdges?: Edge[];
+  targetNode?: GraphNode;
 }
 
 export default function EditableEdge({
@@ -35,14 +45,28 @@ export default function EditableEdge({
   isEditing: globalIsEditing = false,
   onStartEditing,
   onStopEditing,
+  // Nuevas props para lógica de switch
+  allEdges = [],
+  targetNode,
 }: EditableEdgeProps) {
   // Usar el estado global de edición en lugar del local
   const isEditing = globalIsEditing;
 
   const edgeData = data as EditableEdgeData;
+
+  // Calcular lógica de switch para este edge
+  const currentEdge: Edge = {
+    id,
+    source: edgeData.fromNode,
+    target: edgeData.toNode || "",
+    data: edgeData,
+  } as Edge;
+
+  const switchLogic = getEdgeSwitchLogic(currentEdge, allEdges, targetNode);
+  const { isDefault, color } = switchLogic;
   const [condition, setCondition] = useState<EdgeCondition>(
     edgeData?.condition || {
-      field: "points",
+      field: isDefault ? "default" : "points",
       operator: ">=",
       value: 0,
     }
@@ -65,8 +89,14 @@ export default function EditableEdge({
     targetPosition,
   });
 
-  // Validación de la condición
-  const validation = validateEdgeCondition(condition);
+  // Validación de la condición - "default" siempre es válido
+  const validation = useMemo(
+    () =>
+      condition.field === "default"
+        ? { isValid: true, errors: {} }
+        : validateEdgeCondition(condition),
+    [condition]
+  );
 
   // Manejar guardado de condición
   const handleSave = useCallback(() => {
@@ -90,22 +120,29 @@ export default function EditableEdge({
   const handleCancel = useCallback(() => {
     setCondition(
       edgeData?.condition || {
-        field: "points",
+        field: isDefault ? "default" : "points",
         operator: ">=",
         value: 0,
       }
     );
     onStopEditing?.();
-  }, [edgeData?.condition, onStopEditing]);
+  }, [edgeData?.condition, onStopEditing, isDefault]);
 
-  // Generar label para mostrar la condición
+  // Generar label para mostrar la condición o "default"
   const getConditionLabel = () => {
     // Usar el estado local actual en lugar de edgeData?.condition para evitar retrasos
     const currentCondition = edgeData?.condition || condition;
-    if (currentCondition) {
+
+    // Si el campo es "default", mostrar "default"
+    if (currentCondition?.field === "default" || isDefault) {
+      return "default";
+    }
+
+    // Para otros campos, mostrar la condición
+    if (currentCondition && (currentCondition.field as string) !== "default") {
       return `${currentCondition.field} ${currentCondition.operator} ${currentCondition.value}`;
     }
-    return edgeData?.outcome || "";
+    return edgeData?.outcome || "condition";
   };
 
   return (
@@ -126,7 +163,7 @@ export default function EditableEdge({
         markerEnd={markerEnd}
         style={{
           strokeWidth: isEditing ? 3 : 2,
-          stroke: isEditing ? "#FFEE86" : "#AAAAAA",
+          stroke: isEditing ? "#FFEE86" : color, // Usar color calculado según destino
           strokeDasharray: "8 4",
           strokeDashoffset: "0",
           transition: "all 0.2s",
@@ -149,9 +186,14 @@ export default function EditableEdge({
           {!isEditing ? (
             // Mostrar condición como label
             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-sm">
-              <span className="text-xs font-medium text-gray-700">
+              <span
+                className={`text-xs font-medium ${
+                  isDefault ? "text-blue-700" : "text-gray-700"
+                }`}
+              >
                 {getConditionLabel()}
               </span>
+              {/* Mostrar botón de edición para todos los edges */}
               <EditToggle
                 isEditing={false}
                 onToggle={() => onStartEditing?.()}
@@ -166,46 +208,56 @@ export default function EditableEdge({
                   onChange={(e) =>
                     setCondition({
                       ...condition,
-                      field: e.target.value as "points" | "position" | "score",
+                      field: e.target.value as
+                        | "points"
+                        | "position"
+                        | "score"
+                        | "default",
                     })
                   }
                   className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-16"
                 >
+                  <option value="default">Default</option>
                   <option value="points">Points</option>
                   <option value="position">Position</option>
                   <option value="score">Score</option>
                 </select>
 
-                <select
-                  value={condition.operator}
-                  onChange={(e) =>
-                    setCondition({
-                      ...condition,
-                      operator: e.target.value as ConditionOperator,
-                    })
-                  }
-                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10"
-                >
-                  <option value=">=">&ge;</option>
-                  <option value="<=">&le;</option>
-                  <option value="==">=</option>
-                  <option value="!=">≠</option>
-                  <option value=">">&gt;</option>
-                  <option value="<">&lt;</option>
-                </select>
+                {/* Solo mostrar operador y valor si no es default */}
+                {condition.field !== "default" && (
+                  <>
+                    <select
+                      value={condition.operator}
+                      onChange={(e) =>
+                        setCondition({
+                          ...condition,
+                          operator: e.target.value as ConditionOperator,
+                        })
+                      }
+                      className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10"
+                    >
+                      <option value=">=">&ge;</option>
+                      <option value="<=">&le;</option>
+                      <option value="==">=</option>
+                      <option value="!=">≠</option>
+                      <option value=">">&gt;</option>
+                      <option value="<">&lt;</option>
+                    </select>
 
-                <input
-                  type="number"
-                  value={condition.value}
-                  onChange={(e) =>
-                    setCondition({
-                      ...condition,
-                      value: Number(e.target.value),
-                    })
-                  }
-                  className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
-                  placeholder="0"
-                />
+                    <input
+                      type="number"
+                      value={condition.value}
+                      onChange={(e) =>
+                        setCondition({
+                          ...condition,
+                          value: Number(e.target.value),
+                        })
+                      }
+                      className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
+                      placeholder="0"
+                    />
+                  </>
+                )}
               </div>
 
               {/* Botones mejorados */}

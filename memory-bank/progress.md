@@ -121,6 +121,42 @@ src/
 
 ### 🔧 Mejoras Recientes (2024-12-30)
 
+#### ✅ Lógica de Switch para Edges - NUEVA FUNCIONALIDAD COMPLETA
+**Implementación revolucionaria que transforma el comportamiento de edges en el Tournament Graph Editor:**
+
+**🎯 Funcionalidades de Switch:**
+- **Default Automático**: Primer edge de cada nodo marcado automáticamente como 'default'
+- **UI Diferenciada**: Label "default" en azul vs. condiciones matemáticas en gris
+- **Edición Inteligente**: Solo edges no-default son editables (excepto cuando es único edge)
+- **Coloreado Contextual**: Edges rojos (eliminación), verdes (podio), azules (calificación)
+
+**📁 Archivos Nuevos/Modificados:**
+- `src/utils/edgeLogic.ts` - 🆕 Sistema completo de lógica de switch
+- `src/types.ts` - ✏️ Agregada propiedad `isDefault?: boolean` a `GraphEdge`
+- `src/components/EditableEdge.tsx` - ✏️ Integración completa de lógica de switch
+- `src/TournamentEditor.tsx` - ✏️ Gestión automática en creación de edges
+
+**🔧 Casos de Uso Soportados:**
+1. Nodo nuevo → primer edge automáticamente default
+2. Múltiples edges → primer edge default (no editable), resto editables
+3. Edge único → comportamiento default pero editable  
+4. Coloreado automático según tipo de sink de destino
+
+**⚡ Validación Automática:**
+- Función `validateDefaultEdges()` mantiene consistencia
+- Migración automática de datos existentes
+- Prevención de múltiples defaults por nodo
+
+Esta funcionalidad revoluciona la experiencia de diseño de torneos, implementando verdadera lógica de "switch" donde el flujo default es automático y las condiciones especiales se configuran explícitamente.
+
+**🔧 Mejora Adicional - Edición Completa de Default (2024-12-30):**
+- **Todos los edges editables**: Eliminada restricción - todos los edges ahora tienen botón de edición ✏️  
+- **Formulario mejorado**: Opción "Default" agregada al select como primera opción
+- **UI adaptativa**: Campos de operador y valor se ocultan automáticamente cuando se selecciona "Default"
+- **Tipos extendidos**: `EdgeCondition.field` ahora incluye `"default"` como opción válida
+- **Validación optimizada**: Campo "default" considerado siempre válido sin requerir operador/valor
+- **Experiencia consistente**: Mismo flujo de edición para todos los edges independiente de su estado
+
 #### ✅ Handles de Conexión Siempre Visibles
 - Los handles (puntos de conexión ⚪) ahora son permanentemente visibles
 - No requiere modo edición para conectar nodos manualmente

@@ -21,7 +21,7 @@ export type ConditionOperator = ">=" | "<=" | "==" | "!=" | ">" | "<";
 export type EdgeCondition = {
   operator: ConditionOperator;
   value: number;
-  field: "points" | "position" | "score";
+  field: "points" | "position" | "score" | "default";
 };
 
 export type SinkType = "disqualification" | "qualification" | "podium";
@@ -89,6 +89,8 @@ export type GraphEdge = {
   // Nuevas propiedades para condiciones editables
   condition?: EdgeCondition;
   editable?: boolean;
+  // Nueva propiedad para lógica de switch
+  isDefault?: boolean;
 };
 
 export type TournamentGraph = {

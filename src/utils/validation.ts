@@ -61,6 +61,14 @@ export function validateEdgeCondition(condition: EdgeCondition) {
     errors.field = "Field is required";
   }
 
+  // Si el campo es "default", no validar operator ni value
+  if (condition.field === "default") {
+    return {
+      isValid: true,
+      errors: {},
+    };
+  }
+
   if (!condition.operator) {
     errors.operator = "Operator is required";
   }

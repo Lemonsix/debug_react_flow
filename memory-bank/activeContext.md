@@ -5,6 +5,40 @@
 
 ### 🔧 Mejoras Recientes (2024-12-30)
 
+#### ✅ Lógica de Switch para Edges (2024-12-30 - NUEVA FUNCIONALIDAD)
+Se implementó una lógica completa de "switch" para edges que transforma el comportamiento del flujo de torneos:
+
+**🎯 Funcionalidad de Switch:**
+- **Primer Edge Default**: El primer edge que sale de un nodo se marca automáticamente como 'default' y no requiere condición
+- **Label "Default"**: Los edges default muestran claramente "default" en azul en lugar de condiciones matemáticas
+- **Edición Condicional**: Solo los edges adicionales (no-default) pueden editarse para establecer condiciones específicas
+- **Gestión Automática**: El sistema garantiza que siempre haya exactamente un edge default por nodo
+
+**🎨 Coloreado Inteligente de Edges:**
+- **Edges Rojos**: Conexiones a sinks de eliminación/descalificación (`#fc5f53`)
+- **Edges Verdes**: Conexiones a sinks de podio (`#44c753`)
+- **Edges Azules**: Conexiones a sinks de calificación (`#2563EB`)
+- **Edges Grises**: Conexiones normales entre nodos (`#AAAAAA`)
+
+**⚙️ Implementación Técnica:**
+- **Nuevo archivo**: `src/utils/edgeLogic.ts` con funciones utility para la lógica de switch
+- **Tipo extendido**: `GraphEdge` ahora incluye propiedad `isDefault?: boolean`
+- **Validación automática**: Función `validateDefaultEdges()` asegura consistencia
+- **Integración completa**: Todas las formas de crear edges (manual, proximity, drag) respetan la lógica
+
+**📋 Casos de Uso:**
+1. **Nodo con un solo edge**: Se comporta como default pero es editable
+2. **Primer edge de múltiples**: Marcado como default, editable, muestra "default"
+3. **Edges adicionales**: Editables, muestran condiciones, coloreados según destino
+4. **Migración de datos**: Edges existentes se validan automáticamente al cargar
+
+**🔧 Funcionalidad de Edición Mejorada (2024-12-30 - ACTUALIZACIÓN):**
+- **Todos los edges editables**: Incluso los edges default ahora muestran el botón de edición ✏️
+- **Opción "Default" en formulario**: Select incluye "Default" como primera opción
+- **Formulario adaptativo**: Cuando se selecciona "Default", se ocultan automáticamente los campos de operador y valor
+- **Validación inteligente**: Campo "default" siempre es válido sin requerir operador ni valor
+- **UX consistente**: Todos los edges tienen la misma interfaz de edición
+
 #### ✅ Botón de Edición Arreglado
 Se corrigió un problema donde el botón de edición no aparecía en nodos cuando no estaban en modo edición. El problema era una condición lógica incorrecta que dependía de `data.editable` en lugar de verificar la disponibilidad del callback `onStartEditing`.
 
