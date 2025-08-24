@@ -199,9 +199,7 @@ export default function EditableNode({
         ${
           isEditing
             ? "cursor-grab active:cursor-grabbing"
-            : formData.type === "match"
-            ? "cursor-default"
-            : "cursor-pointer"
+            : "cursor-grab active:cursor-grabbing"
         }
        
       `}

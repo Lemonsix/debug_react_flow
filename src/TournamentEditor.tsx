@@ -85,6 +85,9 @@ function TournamentEditorInternal({
     id: string | null;
   }>({ type: null, id: null });
 
+  // Estado para detectar cuando se está arrastrando un nodo
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+
   // Funciones para manejar el estado de edición global
   const startEditing = useCallback((type: "node" | "edge", id: string) => {
     setCurrentlyEditing({ type, id });
@@ -276,6 +279,9 @@ function TournamentEditorInternal({
     (_: React.MouseEvent, node: Node) => {
       if (!editable) return;
 
+      // Activar estado de arrastre
+      setIsDraggingNode(true);
+
       const closeEdge = getClosestEdge(node);
 
       setEdges((es) => {
@@ -332,6 +338,9 @@ function TournamentEditorInternal({
   const onNodeDragStop = useCallback(
     (_: React.MouseEvent, node: Node) => {
       if (!editable) return;
+
+      // Desactivar estado de arrastre
+      setIsDraggingNode(false);
 
       const closeEdge = getClosestEdge(node);
 
@@ -1675,7 +1684,9 @@ function TournamentEditorInternal({
         elementsSelectable={editable}
         fitView
         fitViewOptions={{ padding: 0.2, minZoom: 0.1, maxZoom: 2 }}
-        className="bg-transparent"
+        className={`bg-transparent ${
+          isDraggingNode ? "cursor-grabbing" : "cursor-default"
+        }`}
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={null}
         elevateNodesOnSelect={true}
