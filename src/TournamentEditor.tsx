@@ -37,6 +37,11 @@ import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 import { validateDefaultEdges } from "./utils/edgeLogic";
 import { getNextAvailablePodiumPosition } from "./utils/validation";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "./components/ui/tooltip";
 
 const NODE_W = 400;
 const NODE_H = 280;
@@ -1396,18 +1401,33 @@ function TournamentEditorInternal({
           <>
             {/* Botones para agregar nodos */}
             <div className="flex gap-1 bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-              <button
-                onClick={() => addNewNode("match")}
-                className="px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
-              >
-                + Match
-              </button>
-              <button
-                onClick={() => addNewNode("sink")}
-                className="px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
-              >
-                + Sink
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => addNewNode("match")}
+                    className="px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
+                  >
+                    + Match
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Un match es un nodo que representa una partida</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => addNewNode("sink")}
+                    className="px-3 py-2 text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded hover:bg-purple-100 transition-colors"
+                  >
+                    + Sink
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Un sink es un nodo de podio o de eliminacion</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             {/* Exportar */}
