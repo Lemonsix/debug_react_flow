@@ -444,7 +444,7 @@ export function MatchConfigEditor({
             return undefined;
           }}
           type="text"
-          placeholder="Cantidad de participantes"
+          placeholder="Cantidad de equipos participantes del match"
           tooltip="Cantidad de organizaciones a participar en el match"
           required
         />

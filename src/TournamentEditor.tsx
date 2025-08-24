@@ -193,6 +193,30 @@ function TournamentEditorInternal({
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
 
+  // Función para auto-guardar y cerrar nodo en edición
+  const autoSaveAndCloseEditing = useCallback(() => {
+    if (currentlyEditing.type === "node" && currentlyEditing.id) {
+      // Encontrar el nodo que se está editando
+      const editingNode = nodes.find((n) => n.id === currentlyEditing.id);
+      if (editingNode) {
+        // Forzar el guardado del nodo activando el handleSave del nodo
+        // Al actualizar con editable: false, el nodo se auto-guardará y cerrará
+        setNodes((currentNodes) =>
+          currentNodes.map((node) =>
+            node.id === currentlyEditing.id
+              ? {
+                  ...node,
+                  data: { ...node.data, editable: false },
+                }
+              : node
+          )
+        );
+      }
+      // Cerrar el modo de edición
+      stopEditing();
+    }
+  }, [currentlyEditing, nodes, setNodes, stopEditing]);
+
   // Manejadores optimizados para cambios de nodos y edges
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -854,6 +878,9 @@ function TournamentEditorInternal({
   // Agregar nuevo nodo
   const addNewNode = useCallback(
     (nodeType: NodeType) => {
+      // Auto-guardar y cerrar cualquier nodo en edición antes de crear uno nuevo
+      autoSaveAndCloseEditing();
+
       const newId = `node-${Date.now()}`;
 
       // Para nodos sink de tipo podio, calcular la siguiente posición disponible
@@ -872,7 +899,7 @@ function TournamentEditorInternal({
           nodeType === "sink"
             ? []
             : Array.from({ length: 2 }, (_, i) => ({ index: i })),
-        editable: true,
+        editable: false, // Los nuevos nodos no se abren automáticamente en edición
         position: { x: 100, y: 100 },
         ...(nodeType === "sink" && {
           sinkConfig: {
@@ -906,7 +933,14 @@ function TournamentEditorInternal({
         afterState: reactFlowNode,
       });
     },
-    [graph.phaseId, editable, setNodes, addToHistory, nodes]
+    [
+      graph.phaseId,
+      editable,
+      setNodes,
+      addToHistory,
+      nodes,
+      autoSaveAndCloseEditing,
+    ]
   );
 
   // Undo
@@ -1204,6 +1238,8 @@ function TournamentEditorInternal({
   // Pegar elementos copiados
   const pasteElements = useCallback(() => {
     if (copiedNode && editable) {
+      // Auto-guardar y cerrar cualquier nodo en edición antes de pegar
+      autoSaveAndCloseEditing();
       // Verificar si es datos múltiples o un solo nodo
       const clipboardData = copiedNode as {
         nodes?: GraphNode[];
@@ -1346,6 +1382,7 @@ function TournamentEditorInternal({
         const newNode: GraphNode = {
           ...singleNode,
           id: newId,
+          editable: false, // Los nodos pegados no se abren automáticamente en edición
           position: {
             x: basePosition.x + 50,
             y: basePosition.y + 50,
@@ -1361,7 +1398,7 @@ function TournamentEditorInternal({
 
         const reactFlowNode: Node = {
           id: newId,
-          type: "editable",
+          type: editable ? "editable" : "readonly",
           data: newNode,
           position: {
             x: basePosition.x + 50,
@@ -1390,6 +1427,7 @@ function TournamentEditorInternal({
     nodes,
     selectedNodeId,
     addToHistory,
+    autoSaveAndCloseEditing,
   ]);
 
   // Función unificada para validar eliminación de nodos
