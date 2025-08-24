@@ -35,6 +35,7 @@ import type {
 import EditableNode from "./components/EditableNode";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 import { validateDefaultEdges } from "./utils/edgeLogic";
+import { getNextAvailablePodiumPosition } from "./utils/validation";
 
 const NODE_W = 400;
 const NODE_H = 280;
@@ -424,17 +425,23 @@ function TournamentEditorInternal({
   // Usar nodeTypes y edgeTypes memoizados con dependencias mínimas
   const nodeTypes = useMemo(
     () => ({
-      editable: (props: NodeProps) => (
-        <EditableNode
-          key={props.id}
-          data={props.data as GraphNode}
-          onChange={(updates) => handleNodeChange(props.id, updates)}
-          isConnectable={props.isConnectable}
-          isEditing={isCurrentlyEditing("node", props.id)}
-          onStartEditing={() => startEditing("node", props.id)}
-          onStopEditing={stopEditing}
-        />
-      ),
+      editable: (props: NodeProps) => {
+        // Pasar todos los nodos como GraphNode para validación
+        const allGraphNodes = nodes.map((n) => n.data as GraphNode);
+
+        return (
+          <EditableNode
+            key={props.id}
+            data={props.data as GraphNode}
+            onChange={(updates) => handleNodeChange(props.id, updates)}
+            isConnectable={props.isConnectable}
+            isEditing={isCurrentlyEditing("node", props.id)}
+            onStartEditing={() => startEditing("node", props.id)}
+            onStopEditing={stopEditing}
+            allNodes={allGraphNodes}
+          />
+        );
+      },
       readonly: (props: NodeProps) => (
         <EditableNode
           key={props.id}
@@ -444,10 +451,11 @@ function TournamentEditorInternal({
           isEditing={false}
           onStartEditing={() => {}} // No-op en modo solo lectura
           onStopEditing={() => {}} // No-op en modo solo lectura
+          allNodes={[]} // No necesario en modo solo lectura
         />
       ),
     }),
-    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing]
+    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing, nodes]
   );
 
   const edgeTypes = useMemo(
@@ -888,6 +896,22 @@ function TournamentEditorInternal({
       const basePosition = currentSelectedNode?.position ||
         copiedNode.position || { x: 100, y: 100 };
 
+      // Auto-incrementar posición de podio si se está copiando un sink de tipo podio
+      let newSinkConfig = copiedNode.sinkConfig;
+      if (
+        copiedNode.type === "sink" &&
+        copiedNode.sinkConfig?.sinkType === "podium"
+      ) {
+        // Obtener todas las GraphNode actuales de los nodos de React Flow
+        const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
+        const nextPosition = getNextAvailablePodiumPosition(currentGraphNodes);
+
+        newSinkConfig = {
+          ...copiedNode.sinkConfig,
+          position: nextPosition,
+        };
+      }
+
       const newNode: GraphNode = {
         ...copiedNode,
         id: newId,
@@ -895,6 +919,7 @@ function TournamentEditorInternal({
           x: basePosition.x + 50,
           y: basePosition.y + 50,
         },
+        sinkConfig: newSinkConfig,
         slots: copiedNode.slots.map((slot) => ({
           ...slot,
           participantId: undefined, // Limpiar participantes en la copia

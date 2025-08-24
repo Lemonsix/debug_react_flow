@@ -3,6 +3,7 @@ import type {
   EdgeCondition,
   SinkConfiguration,
   MatchConfiguration,
+  GraphNode,
 } from "../types";
 
 // Validación para formularios de nodo
@@ -81,4 +82,55 @@ export function validateEdgeCondition(condition: EdgeCondition) {
     isValid: Object.keys(errors).length === 0,
     errors,
   };
+}
+
+// Validación para posiciones de podio duplicadas
+export function validatePodiumPosition(
+  position: number,
+  currentNodeId: string,
+  allNodes: GraphNode[]
+): { isValid: boolean; error?: string } {
+  // Buscar otros nodos sink de tipo podio con la misma posición
+  const duplicateNode = allNodes.find(
+    (node) =>
+      node.id !== currentNodeId &&
+      node.type === "sink" &&
+      node.sinkConfig?.sinkType === "podium" &&
+      node.sinkConfig?.position === position
+  );
+
+  if (duplicateNode) {
+    return {
+      isValid: false,
+      error: `Ya existe un podio en la posición ${position}. Cada posición debe ser única.`,
+    };
+  }
+
+  return { isValid: true };
+}
+
+// Función para obtener la siguiente posición disponible de podio
+export function getNextAvailablePodiumPosition(allNodes: GraphNode[]): number {
+  // Obtener todas las posiciones de podio ocupadas
+  const occupiedPositions = allNodes
+    .filter(
+      (node) =>
+        node.type === "sink" &&
+        node.sinkConfig?.sinkType === "podium" &&
+        node.sinkConfig?.position
+    )
+    .map((node) => node.sinkConfig!.position!)
+    .sort((a, b) => a - b);
+
+  // Encontrar la primera posición disponible empezando desde 1
+  let nextPosition = 1;
+  for (const position of occupiedPositions) {
+    if (position === nextPosition) {
+      nextPosition++;
+    } else {
+      break;
+    }
+  }
+
+  return nextPosition;
 }

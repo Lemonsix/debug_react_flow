@@ -39,6 +39,25 @@ Se implementó una lógica completa de "switch" para edges que transforma el com
 - **Validación inteligente**: Campo "default" siempre es válido sin requerir operador ni valor
 - **UX consistente**: Todos los edges tienen la misma interfaz de edición
 
+#### ✅ Gestión Inteligente de Podios (2024-12-30 - NUEVA FUNCIONALIDAD AVANZADA)
+Se implementó un sistema completo de gestión de nodos podio con auto-incremento y validación en tiempo real:
+
+**🎯 Auto-Incremento en Copia:**
+- **Copia inteligente**: Al copiar un nodo podio, automáticamente asigna la siguiente posición disponible
+- **Posiciones consecutivas**: Si existe podio posición 1, la copia será posición 2 automáticamente
+- **Algoritmo eficiente**: Encuentra la primera posición libre (1, 2, 3...) sin gaps
+
+**⚠️ Validación de Duplicados:**
+- **Validación en tiempo real**: Impide guardar podios con posiciones duplicadas
+- **Mensaje de error claro**: Texto rojo debajo del input explicando el conflicto específico
+- **Verificación cruzada**: Compara contra todos los nodos del grafo en tiempo real
+
+**🎨 Migración a React Hook Form + shadcn:**
+- **Formularios modernos**: SinkConfigForm completamente reescrito con react-hook-form
+- **Componentes shadcn**: Usa Input, Select, Form components oficiales de shadcn/ui
+- **Validación con Zod**: Schema de validación tipado y robusto
+- **UX mejorada**: Feedback visual inmediato y consistente con el resto de la aplicación
+
 #### ✅ Botón de Edición Arreglado
 Se corrigió un problema donde el botón de edición no aparecía en nodos cuando no estaban en modo edición. El problema era una condición lógica incorrecta que dependía de `data.editable` en lugar de verificar la disponibilidad del callback `onStartEditing`.
 

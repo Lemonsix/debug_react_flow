@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from "react";
 import { Handle, Position } from "@xyflow/react";
-import type { GraphNode } from "../types";
-import { SinkConfigEditor, MatchConfigEditor } from "./FormComponents";
-import { validateNodeForm } from "../utils/validation";
-import type { MatchConfiguration } from "../types";
 import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import type { GraphNode, MatchConfiguration } from "../types";
+import { validateNodeForm } from "../utils/validation";
+import { MatchConfigEditor } from "./FormComponents";
+import { SinkConfigForm } from "./SinkConfigForm";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -13,6 +13,7 @@ interface EditableNodeProps {
   isEditing?: boolean;
   onStartEditing?: () => void;
   onStopEditing?: () => void;
+  allNodes?: GraphNode[];
 }
 
 export default function EditableNode({
@@ -22,6 +23,7 @@ export default function EditableNode({
   isEditing: globalIsEditing = false,
   onStartEditing,
   onStopEditing,
+  allNodes = [],
 }: EditableNodeProps) {
   // Usar el estado global de edición en lugar del local
   const isEditing = globalIsEditing || data.editable;
@@ -224,9 +226,11 @@ export default function EditableNode({
                 onChange={(config) => handleUpdate("matchConfig", config)}
               />
             ) : formData.type === "sink" ? (
-              <SinkConfigEditor
+              <SinkConfigForm
                 config={formData.sinkConfig}
                 onChange={(config) => handleUpdate("sinkConfig", config)}
+                nodeId={data.id}
+                allNodes={allNodes}
               />
             ) : null}
 
