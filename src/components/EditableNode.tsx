@@ -59,7 +59,9 @@ export default function EditableNode({
     formData.type,
     formData.capacity,
     formData.sinkConfig,
-    formData.matchConfig
+    formData.matchConfig,
+    data.id,
+    allNodes
   );
 
   // Actualizar datos del nodo

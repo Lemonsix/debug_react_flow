@@ -693,6 +693,14 @@ function TournamentEditorInternal({
   const addNewNode = useCallback(
     (nodeType: NodeType) => {
       const newId = `node-${Date.now()}`;
+
+      // Para nodos sink de tipo podio, calcular la siguiente posición disponible
+      let podiumPosition = 1;
+      if (nodeType === "sink") {
+        const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
+        podiumPosition = getNextAvailablePodiumPosition(currentGraphNodes);
+      }
+
       const newNode: GraphNode = {
         id: newId,
         phaseId: graph.phaseId,
@@ -707,7 +715,7 @@ function TournamentEditorInternal({
         ...(nodeType === "sink" && {
           sinkConfig: {
             sinkType: "podium" as const,
-            position: 1,
+            position: podiumPosition,
           },
         }),
         ...(nodeType === "match" && {

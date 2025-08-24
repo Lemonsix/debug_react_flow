@@ -11,7 +11,9 @@ export function validateNodeForm(
   nodeType: NodeType,
   capacity: number,
   sinkConfig?: SinkConfiguration,
-  matchConfig?: MatchConfiguration
+  matchConfig?: MatchConfiguration,
+  currentNodeId?: string,
+  allNodes?: GraphNode[]
 ) {
   const errors: Record<string, string> = {};
 
@@ -33,6 +35,24 @@ export function validateNodeForm(
       (!sinkConfig.position || sinkConfig.position < 1)
     ) {
       errors.position = "Position must be at least 1";
+    }
+
+    // Validación de posiciones duplicadas para podio
+    if (
+      sinkConfig.sinkType === "podium" &&
+      sinkConfig.position &&
+      currentNodeId &&
+      allNodes
+    ) {
+      const duplicateValidation = validatePodiumPosition(
+        sinkConfig.position,
+        currentNodeId,
+        allNodes
+      );
+      if (!duplicateValidation.isValid) {
+        errors.position =
+          duplicateValidation.error || "Position already exists";
+      }
     }
 
     // Validación removida para qualification ya que no está disponible
