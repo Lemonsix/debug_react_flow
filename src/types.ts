@@ -114,7 +114,9 @@ export type TournamentGraph = {
 export type HistoryActionType =
   | "ADD_NODE"
   | "PASTE_NODE"
+  | "PASTE_MULTIPLE"
   | "DELETE_NODE"
+  | "DELETE_MULTIPLE"
   | "EDIT_NODE"
   | "ADD_EDGE"
   | "DELETE_EDGE"

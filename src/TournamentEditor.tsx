@@ -19,6 +19,7 @@ import {
   getViewportForBounds,
   type NodeChange,
   type EdgeChange,
+  type OnSelectionChangeFunc,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -54,9 +55,15 @@ function TournamentEditorInternal({
   onGraphChange,
 }: TournamentEditorProps) {
   const reactFlowInstance = useReactFlow();
-  const [copiedNode, setCopiedNode] = useState<GraphNode | null>(null);
+  const [copiedNode, setCopiedNode] = useState<
+    | GraphNode
+    | { nodes: GraphNode[]; edges: GraphEdge[]; timestamp: number }
+    | null
+  >(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
+  const [selectedEdges, setSelectedEdges] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryState>({
     actions: [],
     currentIndex: -1,
@@ -195,7 +202,9 @@ function TournamentEditorInternal({
         }
       });
     },
-    [onNodesChange, nodes, addToHistory]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onNodesChange, addToHistory]
+    // Removemos 'nodes' de las dependencias ya que se accede dinámicamente para evitar re-renders
   );
 
   const handleEdgesChange = useCallback(
@@ -373,17 +382,17 @@ function TournamentEditorInternal({
   // Función para actualizar condiciones de edges
   const handleEdgeConditionUpdate = useCallback(
     (edgeId: string, condition: EdgeCondition) => {
-      setEdges((edges) => {
+      setEdges((currentEdges) => {
         // Encontrar el edge que se está modificando
-        const targetEdge = edges.find((e) => e.id === edgeId);
-        if (!targetEdge) return edges;
+        const targetEdge = currentEdges.find((e) => e.id === edgeId);
+        if (!targetEdge) return currentEdges;
 
         const sourceNodeId = targetEdge.source;
         const isBecomingDefault = condition.field === "default";
         const wasDefault = (targetEdge.data as GraphEdge)?.isDefault === true;
         const isStoppingBeingDefault = wasDefault && !isBecomingDefault;
 
-        const updatedEdges = edges.map((edge) => {
+        const updatedEdges = currentEdges.map((edge) => {
           if (edge.id === edgeId) {
             // Actualizar el edge objetivo
             return {
@@ -459,20 +468,21 @@ function TournamentEditorInternal({
           }
         }
 
-        return updatedEdges;
-      });
+        // Agregar al historial usando el estado actual
+        addToHistory("EDIT_EDGE", {
+          edgeId,
+          beforeState: targetEdge.data,
+          afterState: { ...targetEdge.data, condition },
+        });
 
-      // Agregar al historial
-      addToHistory("EDIT_EDGE", {
-        edgeId,
-        beforeState: edges.find((e) => e.id === edgeId)?.data,
-        afterState: { ...edges.find((e) => e.id === edgeId)?.data, condition },
+        return updatedEdges;
       });
 
       // Cerrar la edición del edge después de guardar
       stopEditing();
     },
-    [setEdges, edges, addToHistory, stopEditing]
+    [setEdges, addToHistory, stopEditing]
+    // Removemos 'edges' de las dependencias ya que usamos el estado actual en setEdges
   );
 
   // Función para manejar cambios en nodos
@@ -497,11 +507,11 @@ function TournamentEditorInternal({
     [setNodes, stopEditing]
   );
 
-  // Usar nodeTypes y edgeTypes memoizados con dependencias mínimas
+  // Usar nodeTypes memoizados con dependencias estables
   const nodeTypes = useMemo(
     () => ({
       editable: (props: NodeProps) => {
-        // Pasar todos los nodos como GraphNode para validación
+        // Obtener nodos dinámicamente para evitar dependencias innecesarias
         const allGraphNodes = nodes.map((n) => n.data as GraphNode);
 
         return (
@@ -530,13 +540,15 @@ function TournamentEditorInternal({
         />
       ),
     }),
-    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing, nodes]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleNodeChange, isCurrentlyEditing, startEditing, stopEditing]
+    // Removemos 'nodes' de las dependencias para evitar recálculos innecesarios durante el drag
   );
 
   const edgeTypes = useMemo(
     () => ({
       editable: (props: EdgeProps) => {
-        // Encontrar el nodo de destino para determinar el coloreado
+        // Obtener datos dinámicamente para evitar dependencias innecesarias
         const targetNode = nodes.find((n) => n.id === props.target)?.data as
           | GraphNode
           | undefined;
@@ -556,14 +568,9 @@ function TournamentEditorInternal({
       },
       simple: SimpleEdge,
     }),
-    [
-      handleEdgeConditionUpdate,
-      isCurrentlyEditing,
-      startEditing,
-      stopEditing,
-      edges,
-      nodes,
-    ]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleEdgeConditionUpdate, isCurrentlyEditing, startEditing, stopEditing]
+    // Removemos 'edges' y 'nodes' de las dependencias para evitar recálculos innecesarios durante el drag
   );
 
   // Actualizar cuando el grafo cambie, pero preservar posiciones actuales
@@ -929,135 +936,370 @@ function TournamentEditorInternal({
     }, 0);
   }, [rfNodes, setNodes, reactFlowInstance]);
 
-  // Manejar selección de nodos
+  // Manejar selección múltiple con React Flow
+  const onSelectionChange: OnSelectionChangeFunc = useCallback(
+    ({ nodes: selectedNodes, edges: selectedEdges }) => {
+      if (editable) {
+        const nodeIds = selectedNodes.map((n) => n.id);
+        const edgeIds = selectedEdges.map((e) => e.id);
+
+        setSelectedNodes(nodeIds);
+        setSelectedEdges(edgeIds);
+
+        // Mantener compatibilidad con selección individual
+        setSelectedNodeId(nodeIds.length === 1 ? nodeIds[0] : null);
+        setSelectedEdgeId(edgeIds.length === 1 ? edgeIds[0] : null);
+      }
+    },
+    [editable]
+  );
+
+  // Manejar selección de nodos (mantener para compatibilidad)
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       if (editable) {
         setSelectedNodeId(node.id);
-        setSelectedEdgeId(null); // Deseleccionar edge si se selecciona nodo
+        setSelectedEdgeId(null);
       }
     },
     [editable]
   );
 
-  // Manejar selección de edges
+  // Manejar selección de edges (mantener para compatibilidad)
   const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
       if (editable) {
         setSelectedEdgeId(edge.id);
-        setSelectedNodeId(null); // Deseleccionar nodo si se selecciona edge
+        setSelectedNodeId(null);
       }
     },
     [editable]
   );
 
-  // Copiar nodo seleccionado
-  const copySelectedNode = useCallback(() => {
-    if (selectedNodeId && editable) {
-      const nodeData = nodes.find((n) => n.id === selectedNodeId)?.data;
-      if (nodeData) {
-        setCopiedNode(nodeData as GraphNode);
-      }
-    }
-  }, [selectedNodeId, nodes, editable]);
+  // Copiar nodos y edges seleccionados
+  const copySelectedElements = useCallback(() => {
+    if (editable && (selectedNodes.length > 0 || selectedNodeId)) {
+      // Usar selección múltiple si hay elementos seleccionados, sino usar selección individual
+      const nodeIdsToProcess =
+        selectedNodes.length > 0
+          ? selectedNodes
+          : selectedNodeId
+          ? [selectedNodeId]
+          : [];
 
-  // Pegar nodo copiado
-  const pasteNode = useCallback(() => {
+      if (nodeIdsToProcess.length === 0) return;
+
+      // Obtener datos de los nodos seleccionados
+      const nodesToCopy = nodeIdsToProcess
+        .map((id) => {
+          const node = nodes.find((n) => n.id === id);
+          return node?.data as GraphNode;
+        })
+        .filter(Boolean);
+
+      // Obtener edges que conectan nodos seleccionados (ambos extremos deben estar seleccionados)
+      const edgesToCopy = edges
+        .filter(
+          (edge) =>
+            nodeIdsToProcess.includes(edge.source) &&
+            nodeIdsToProcess.includes(edge.target)
+        )
+        .map((edge) => edge.data as GraphEdge);
+
+      // Guardar en estado para pegar después
+      const clipboardData = {
+        nodes: nodesToCopy,
+        edges: edgesToCopy,
+        timestamp: Date.now(),
+      };
+
+      setCopiedNode(
+        clipboardData as
+          | GraphNode
+          | { nodes: GraphNode[]; edges: GraphEdge[]; timestamp: number }
+      ); // Reutilizar el estado existente
+
+      // Mostrar feedback visual
+      console.log(
+        `Copied ${nodesToCopy.length} node(s) and ${edgesToCopy.length} edge(s)`
+      );
+    }
+  }, [selectedNodes, selectedNodeId, nodes, edges, editable]);
+
+  // Pegar elementos copiados
+  const pasteElements = useCallback(() => {
     if (copiedNode && editable) {
-      const newId = `node-${Date.now()}`;
+      // Verificar si es datos múltiples o un solo nodo
+      const clipboardData = copiedNode as {
+        nodes?: GraphNode[];
+        edges?: GraphEdge[];
+        timestamp?: number;
+      };
+      const isMultipleElements =
+        clipboardData.nodes && Array.isArray(clipboardData.nodes);
 
-      // Calcular posición basada en la posición actual del nodo en React Flow, no en los datos del grafo
-      const currentSelectedNode = nodes.find((n) => n.id === selectedNodeId);
-      const basePosition = currentSelectedNode?.position ||
-        copiedNode.position || { x: 100, y: 100 };
+      if (isMultipleElements) {
+        // Pegar múltiples nodos y edges
+        const { nodes: nodesToPaste, edges: edgesToPaste } = clipboardData;
+        const timestamp = Date.now();
+        const nodeIdMapping: Record<string, string> = {};
+        const newNodes: Node[] = [];
 
-      // Auto-incrementar posición de podio si se está copiando un sink de tipo podio
-      let newSinkConfig = copiedNode.sinkConfig;
-      if (
-        copiedNode.type === "sink" &&
-        copiedNode.sinkConfig?.sinkType === "podium"
-      ) {
-        // Obtener todas las GraphNode actuales de los nodos de React Flow
-        const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
-        const nextPosition = getNextAvailablePodiumPosition(currentGraphNodes);
+        // Determinar posición base
+        const basePosition = selectedNodeId
+          ? nodes.find((n) => n.id === selectedNodeId)?.position || {
+              x: 100,
+              y: 100,
+            }
+          : { x: 100, y: 100 };
 
-        newSinkConfig = {
-          ...copiedNode.sinkConfig,
-          position: nextPosition,
+        // Crear nuevos nodos
+        nodesToPaste?.forEach((nodeData: GraphNode, index: number) => {
+          const newId = `node-${timestamp}-${index}`;
+          nodeIdMapping[nodeData.id] = newId;
+
+          // Auto-incrementar posición de podio si es necesario
+          let newSinkConfig = nodeData.sinkConfig;
+          if (
+            nodeData.type === "sink" &&
+            nodeData.sinkConfig?.sinkType === "podium"
+          ) {
+            const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
+            const nextPosition =
+              getNextAvailablePodiumPosition(currentGraphNodes);
+            newSinkConfig = {
+              ...nodeData.sinkConfig,
+              position: nextPosition + index, // Incrementar para múltiples
+            };
+          }
+
+          const newNode: GraphNode = {
+            ...nodeData,
+            id: newId,
+            position: {
+              x: basePosition.x + (index % 2) * 450 + 50, // Organizar en grid 2x2
+              y: basePosition.y + Math.floor(index / 2) * 350 + 50,
+            },
+            sinkConfig: newSinkConfig,
+            slots: nodeData.slots.map((slot) => ({
+              ...slot,
+              participantId: undefined, // Limpiar participantes
+            })),
+          };
+
+          const reactFlowNode: Node = {
+            id: newId,
+            type: editable ? "editable" : "readonly",
+            data: newNode,
+            position: newNode.position!,
+          };
+
+          newNodes.push(reactFlowNode);
+        });
+
+        // Agregar nodos
+        setNodes((nds) => nds.concat(newNodes));
+
+        // Crear nuevos edges
+        const newEdges: Edge[] = [];
+        edgesToPaste?.forEach((edgeData: GraphEdge, index: number) => {
+          const newSourceId = nodeIdMapping[edgeData.fromNode];
+          const newTargetId = nodeIdMapping[edgeData.toNode || ""];
+
+          if (newSourceId && newTargetId) {
+            const newEdgeId = `edge-${timestamp}-${index}`;
+            const newEdge: Edge = {
+              id: newEdgeId,
+              source: newSourceId,
+              target: newTargetId,
+              type: "editable",
+              data: {
+                ...edgeData,
+                id: newEdgeId,
+                fromNode: newSourceId,
+                toNode: newTargetId,
+              },
+              markerEnd: { type: MarkerType.ArrowClosed },
+            };
+            newEdges.push(newEdge);
+          }
+        });
+
+        // Agregar edges
+        setEdges((eds) => eds.concat(newEdges));
+
+        // Agregar al historial
+        addToHistory("PASTE_MULTIPLE", {
+          nodeIds: newNodes.map((n) => n.id),
+          edgeIds: newEdges.map((e) => e.id),
+          afterState: { nodes: newNodes, edges: newEdges } as Record<
+            string,
+            unknown
+          >,
+        });
+
+        // Seleccionar los nuevos nodos
+        setSelectedNodes(newNodes.map((n) => n.id));
+        setSelectedNodeId(null);
+      } else {
+        // Pegar un solo nodo (lógica existente)
+        const newId = `node-${Date.now()}`;
+
+        // Calcular posición basada en la posición actual del nodo en React Flow, no en los datos del grafo
+        const currentSelectedNode = nodes.find((n) => n.id === selectedNodeId);
+        const singleNode = copiedNode as GraphNode;
+        const basePosition = currentSelectedNode?.position ||
+          singleNode.position || { x: 100, y: 100 };
+
+        // Auto-incrementar posición de podio si se está copiando un sink de tipo podio
+        let newSinkConfig = singleNode.sinkConfig;
+        if (
+          singleNode.type === "sink" &&
+          singleNode.sinkConfig?.sinkType === "podium"
+        ) {
+          // Obtener todas las GraphNode actuales de los nodos de React Flow
+          const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
+          const nextPosition =
+            getNextAvailablePodiumPosition(currentGraphNodes);
+
+          newSinkConfig = {
+            ...singleNode.sinkConfig,
+            position: nextPosition,
+          };
+        }
+
+        const newNode: GraphNode = {
+          ...singleNode,
+          id: newId,
+          position: {
+            x: basePosition.x + 50,
+            y: basePosition.y + 50,
+          },
+          sinkConfig: newSinkConfig,
+          slots: singleNode.slots.map((slot) => ({
+            ...slot,
+            participantId: undefined, // Limpiar participantes en la copia
+            sourceNodeId: undefined,
+            sourceOutcome: undefined,
+          })),
         };
+
+        const reactFlowNode: Node = {
+          id: newId,
+          type: "editable",
+          data: newNode,
+          position: {
+            x: basePosition.x + 50,
+            y: basePosition.y + 50,
+          },
+        };
+
+        // Solo agregar el nuevo nodo, sin tocar los existentes ni el grafo global
+        setNodes((currentNodes) => [...currentNodes, reactFlowNode]);
+
+        // Agregar al historial
+        addToHistory("PASTE_NODE", {
+          nodeId: newId,
+          afterState: reactFlowNode,
+        });
+
+        // Seleccionar el nodo recién pegado
+        setSelectedNodeId(newId);
       }
-
-      const newNode: GraphNode = {
-        ...copiedNode,
-        id: newId,
-        position: {
-          x: basePosition.x + 50,
-          y: basePosition.y + 50,
-        },
-        sinkConfig: newSinkConfig,
-        slots: copiedNode.slots.map((slot) => ({
-          ...slot,
-          participantId: undefined, // Limpiar participantes en la copia
-          sourceNodeId: undefined,
-          sourceOutcome: undefined,
-        })),
-      };
-
-      const reactFlowNode: Node = {
-        id: newId,
-        type: "editable",
-        data: newNode,
-        position: {
-          x: basePosition.x + 50,
-          y: basePosition.y + 50,
-        },
-      };
-
-      // Solo agregar el nuevo nodo, sin tocar los existentes ni el grafo global
-      setNodes((currentNodes) => [...currentNodes, reactFlowNode]);
-
-      // Agregar al historial
-      addToHistory("PASTE_NODE", {
-        nodeId: newId,
-        afterState: reactFlowNode,
-      });
-
-      // Seleccionar el nodo recién pegado
-      setSelectedNodeId(newId);
     }
-  }, [copiedNode, editable, setNodes, nodes, selectedNodeId, addToHistory]);
+  }, [
+    copiedNode,
+    editable,
+    setNodes,
+    setEdges,
+    nodes,
+    selectedNodeId,
+    addToHistory,
+  ]);
 
-  // Eliminar nodo seleccionado
-  const deleteSelectedNode = useCallback(() => {
-    if (selectedNodeId && editable) {
-      // Guardar estado antes de eliminar
-      const nodeToDelete = nodes.find((n) => n.id === selectedNodeId);
-      const edgesToDelete = edges.filter(
-        (e) => e.source === selectedNodeId || e.target === selectedNodeId
+  // Eliminar elementos seleccionados
+  const deleteSelectedElements = useCallback(() => {
+    if (!editable) return;
+
+    // Procesar selección múltiple si hay elementos seleccionados
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+      const nodesToDelete = nodes.filter((n) => selectedNodes.includes(n.id));
+      const edgesToDelete = edges.filter((e) => selectedEdges.includes(e.id));
+
+      // También eliminar edges conectados a los nodos que se van a eliminar
+      const connectedEdges = edges.filter(
+        (e) =>
+          selectedNodes.includes(e.source) || selectedNodes.includes(e.target)
       );
 
-      setNodes((nds) => nds.filter((node) => node.id !== selectedNodeId));
+      // Eliminar nodos y edges
+      setNodes((nds) => nds.filter((n) => !selectedNodes.includes(n.id)));
       setEdges((eds) =>
         eds.filter(
-          (edge) =>
-            edge.source !== selectedNodeId && edge.target !== selectedNodeId
+          (e) =>
+            !selectedEdges.includes(e.id) &&
+            !selectedNodes.includes(e.source) &&
+            !selectedNodes.includes(e.target)
         )
       );
 
       // Agregar al historial
-      if (nodeToDelete) {
-        addToHistory("DELETE_NODE", {
-          nodeId: selectedNodeId,
-          beforeState: nodeToDelete,
-          edgesBeforeState: edgesToDelete,
-          edgeIds: edgesToDelete.map((e) => e.id),
-        });
-      }
+      addToHistory("DELETE_MULTIPLE", {
+        nodeIds: selectedNodes,
+        edgeIds: [...selectedEdges, ...connectedEdges.map((e) => e.id)],
+        beforeState: {
+          nodes: nodesToDelete,
+          edges: [...edgesToDelete, ...connectedEdges],
+        } as Record<string, unknown>,
+      });
+
+      // Limpiar selección
+      setSelectedNodes([]);
+      setSelectedEdges([]);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+    } else if (selectedNodeId) {
+      // Eliminar nodo individual (lógica existente)
+      const nodeToDelete = nodes.find((n) => n.id === selectedNodeId);
+      if (!nodeToDelete) return;
+
+      const connectedEdges = edges.filter(
+        (e) => e.source === selectedNodeId || e.target === selectedNodeId
+      );
+
+      setNodes((nds) => nds.filter((n) => n.id !== selectedNodeId));
+      setEdges((eds) =>
+        eds.filter(
+          (e) => e.source !== selectedNodeId && e.target !== selectedNodeId
+        )
+      );
+
+      addToHistory("DELETE_NODE", {
+        nodeId: selectedNodeId,
+        beforeState: nodeToDelete.data,
+        edgesBeforeState: connectedEdges,
+      });
 
       setSelectedNodeId(null);
+    } else if (selectedEdgeId) {
+      // Eliminar edge individual (lógica existente)
+      const edgeToDelete = edges.find((e) => e.id === selectedEdgeId);
+      if (!edgeToDelete) return;
+
+      setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId));
+
+      addToHistory("DELETE_EDGE", {
+        edgeId: selectedEdgeId,
+        beforeState: edgeToDelete,
+      });
+
+      setSelectedEdgeId(null);
     }
   }, [
+    selectedNodes,
+    selectedEdges,
     selectedNodeId,
+    selectedEdgeId,
     editable,
     setNodes,
     setEdges,
@@ -1066,25 +1308,10 @@ function TournamentEditorInternal({
     addToHistory,
   ]);
 
-  // Eliminar edge seleccionado
-  const deleteSelectedEdge = useCallback(() => {
-    if (selectedEdgeId && editable) {
-      // Guardar estado antes de eliminar
-      const edgeToDelete = edges.find((e) => e.id === selectedEdgeId);
-
-      setEdges((eds) => eds.filter((edge) => edge.id !== selectedEdgeId));
-
-      // Agregar al historial
-      if (edgeToDelete) {
-        addToHistory("DELETE_EDGE", {
-          edgeId: selectedEdgeId,
-          beforeState: edgeToDelete,
-        });
-      }
-
-      setSelectedEdgeId(null);
-    }
-  }, [selectedEdgeId, editable, setEdges, edges, addToHistory]);
+  // Función para desactivar el menú contextual
+  const onContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+  }, []);
 
   // Manejar keyboard shortcuts
   useEffect(() => {
@@ -1094,10 +1321,10 @@ function TournamentEditorInternal({
       if (e.ctrlKey || e.metaKey) {
         if (e.key === "c" || e.key === "C") {
           e.preventDefault();
-          copySelectedNode();
+          copySelectedElements();
         } else if (e.key === "v" || e.key === "V") {
           e.preventDefault();
-          pasteNode();
+          pasteElements();
         } else if (e.key === "z" || e.key === "Z") {
           e.preventDefault();
           undo();
@@ -1107,11 +1334,7 @@ function TournamentEditorInternal({
         }
       } else if (e.key === "Delete") {
         e.preventDefault();
-        if (selectedNodeId) {
-          deleteSelectedNode();
-        } else if (selectedEdgeId) {
-          deleteSelectedEdge();
-        }
+        deleteSelectedElements();
       }
     };
 
@@ -1119,12 +1342,9 @@ function TournamentEditorInternal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [
     editable,
-    copySelectedNode,
-    pasteNode,
-    deleteSelectedNode,
-    deleteSelectedEdge,
-    selectedNodeId,
-    selectedEdgeId,
+    copySelectedElements,
+    pasteElements,
+    deleteSelectedElements,
     undo,
     redo,
   ]);
@@ -1220,6 +1440,8 @@ function TournamentEditorInternal({
         onEdgeClick={onEdgeClick}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        onSelectionChange={onSelectionChange}
+        onContextMenu={onContextMenu}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodesDraggable={editable}
@@ -1231,13 +1453,15 @@ function TournamentEditorInternal({
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={editable ? "Delete" : null}
         elevateNodesOnSelect={true}
-        selectNodesOnDrag={false}
-        panOnDrag={true}
+        selectNodesOnDrag={true}
+        panOnDrag={[2]}
         zoomOnScroll={true}
         zoomOnPinch={true}
         zoomOnDoubleClick={false}
         preventScrolling={true}
         colorMode="dark"
+        multiSelectionKeyCode="Shift"
+        selectionOnDrag={true}
       >
         <MiniMap pannable zoomable nodeColor="#6b7280" />
         <Controls />
@@ -1256,22 +1480,52 @@ function TournamentEditorInternal({
           {graph.esport && <span>Esport: {graph.esport.toUpperCase()}</span>}
           {editable && (
             <>
-              {selectedNodeId && (
+              {selectedNodes.length > 0 && (
+                <span className="text-blue-600 font-medium">
+                  📦 Selected: {selectedNodes.length} node(s)
+                  {selectedEdges.length > 0
+                    ? `, ${selectedEdges.length} edge(s)`
+                    : ""}
+                </span>
+              )}
+              {selectedNodes.length === 0 && selectedNodeId && (
                 <span>Selected Node: {selectedNodeId.slice(0, 8)}...</span>
               )}
-              {selectedEdgeId && (
+              {selectedNodes.length === 0 && selectedEdgeId && (
                 <span className="text-blue-600 font-medium">
-                  🔗 Selected Edge: {selectedEdgeId.slice(0, 8)}... (Press
-                  Delete to remove)
+                  🔗 Selected Edge: {selectedEdgeId.slice(0, 8)}...
                 </span>
               )}
               {copiedNode && (
-                <span className="text-green-600">📋 Node copied</span>
+                <span className="text-green-600 font-medium">
+                  📋 Copied:{" "}
+                  {(copiedNode as { nodes?: GraphNode[] }).nodes
+                    ? `${
+                        (copiedNode as { nodes: GraphNode[] }).nodes.length
+                      } elements`
+                    : (copiedNode as GraphNode).type}{" "}
+                  (Ctrl+V to paste)
+                </span>
               )}
             </>
           )}
         </div>
       </div>
+
+      {/* Help text for controls */}
+      {editable && (
+        <div className="absolute bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 text-sm text-gray-600 max-w-sm">
+          <div>
+            💡 <strong>Controls:</strong>
+          </div>
+          <div>• Left click + drag: Box select multiple elements</div>
+          <div>• Right click + drag: Pan around the canvas</div>
+          <div>• Ctrl+C: Copy selected elements</div>
+          <div>• Ctrl+V: Paste copied elements</div>
+          <div>• Ctrl+Z/Y: Undo/Redo</div>
+          <div>• Delete: Remove selected elements</div>
+        </div>
+      )}
     </div>
   );
 }
