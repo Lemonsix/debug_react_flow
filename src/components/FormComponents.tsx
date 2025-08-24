@@ -6,8 +6,6 @@ import type {
   EdgeCondition,
   MatchConfiguration,
   MatchModalidad,
-  SinkConfiguration,
-  SinkType,
 } from "../types";
 import { DateTimePicker } from "./DateTimePicker";
 import { Label } from "@/components/ui/label";
@@ -142,83 +140,6 @@ export function FormField({
       {(localError || error) && (
         <p className="text-sm text-destructive">{localError || error}</p>
       )}
-    </div>
-  );
-}
-
-// Configuración específica para nodos sink
-interface SinkConfigEditorProps {
-  config: SinkConfiguration;
-  onChange: (config: SinkConfiguration) => void;
-}
-
-export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
-  const sinkTypeOptions = [
-    { value: "podium", label: "Podio" },
-    { value: "disqualification", label: "Eliminación" },
-  ];
-
-  const updateConfig = (
-    field: keyof SinkConfiguration,
-    value: string | number
-  ) => {
-    onChange({ ...config, [field]: value });
-  };
-
-  return (
-    <div className="space-y-3 p-3 text-foreground border border-border rounded-lg">
-      <div className="flex flex-col gap-2">
-        <FormField
-          label="Tipo de Resultado"
-          value={config.sinkType}
-          onChange={(val) => updateConfig("sinkType", val as SinkType)}
-          type="select"
-          options={sinkTypeOptions}
-          required
-        />
-
-        {config.sinkType === "podium" && (
-          <FormField
-            label="Posición"
-            value={config.position || ""}
-            previousValue={config.position}
-            defaultValue={1}
-            onChange={(val) => {
-              updateConfig("position", val);
-            }}
-            validate={(val) => {
-              if (val === "" || val === undefined) {
-                return "La posición es requerida";
-              }
-              const strVal = val.toString();
-
-              // Verificar si contiene caracteres no numéricos o números negativos
-              if (!/^\d+$/.test(strVal)) {
-                if (/^-/.test(strVal)) {
-                  return "Solo se admiten números positivos";
-                } else if (/[^\d-.]/.test(strVal)) {
-                  return "Solo se admiten números enteros";
-                } else if (/\./.test(strVal)) {
-                  return "Solo se admiten números enteros (sin decimales)";
-                } else {
-                  return "Solo se admiten números enteros positivos";
-                }
-              }
-
-              const numVal = Number(strVal);
-              if (numVal < 1) {
-                return "La posición debe ser mayor a 0";
-              }
-              if (numVal > 100) {
-                return "La posición no puede ser mayor a 100";
-              }
-              return undefined;
-            }}
-            type="text"
-            placeholder="1, 2, 3..."
-          />
-        )}
-      </div>
     </div>
   );
 }

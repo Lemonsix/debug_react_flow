@@ -7,7 +7,6 @@ import {
   validateTournamentStructure,
 } from "../utils/validation";
 import { MatchConfigEditor } from "./FormComponents";
-import { SinkConfigForm } from "./SinkConfigForm";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -35,7 +34,6 @@ export default function EditableNode({
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
-    sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
     matchConfig: data.matchConfig || {
       capacity: data.capacity,
       modalidad: "presencial" as const,
@@ -50,7 +48,6 @@ export default function EditableNode({
     setFormData({
       type: data.type,
       capacity: data.capacity,
-      sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
       matchConfig: data.matchConfig || {
         capacity: data.capacity,
         modalidad: "presencial" as const,
@@ -59,32 +56,29 @@ export default function EditableNode({
         title: undefined,
       },
     });
-  }, [data.type, data.capacity, data.sinkConfig, data.matchConfig]);
+  }, [data.type, data.capacity, data.matchConfig]);
 
-  // Validación del formulario
-  const validation = validateNodeForm(
-    formData.type,
-    formData.capacity,
-    formData.sinkConfig,
-    formData.matchConfig,
-    data.id,
-    allNodes
-  );
+  // Validación del formulario (solo para nodos match)
+  const validation =
+    formData.type === "match"
+      ? validateNodeForm(
+          formData.type,
+          formData.capacity,
+          undefined, // No hay sinkConfig
+          formData.matchConfig,
+          data.id,
+          allNodes
+        )
+      : { isValid: true, errors: {} };
 
-  // Actualizar datos del nodo
+  // Actualizar datos del nodo (solo para nodos match)
   const handleUpdate = useCallback(
     (field: string, value: unknown) => {
       const updates = { [field]: value };
       setFormData((prev) => ({ ...prev, ...updates }));
 
       // Validar que el cambio no rompa la estructura mínima del torneo
-      if (
-        field === "type" ||
-        (field === "sinkConfig" &&
-          value &&
-          typeof value === "object" &&
-          "sinkType" in value)
-      ) {
+      if (field === "type") {
         const updatedFormData = { ...formData, ...updates };
         const simulatedNode = { ...data, ...updatedFormData };
         const otherNodes = allNodes.filter((n) => n.id !== data.id);
@@ -130,7 +124,6 @@ export default function EditableNode({
     setFormData({
       type: data.type,
       capacity: data.capacity,
-      sinkConfig: data.sinkConfig || { sinkType: "podium" as const },
       matchConfig: data.matchConfig || {
         capacity: data.capacity,
         modalidad: "presencial" as const,
@@ -151,16 +144,16 @@ export default function EditableNode({
         accent: "bg-emerald-500",
         icon: "M",
       };
-    } else if (formData.type === "sink") {
+    } else if (data.type === "sink") {
       // Configuración específica según el tipo de sink
-      if (formData.sinkConfig?.sinkType === "podium") {
+      if (data.sinkConfig?.sinkType === "podium") {
         return {
           border: "border-yellow-200",
           text: "text-yellow-800",
           accent: "bg-yellow-500",
           icon: "P",
         };
-      } else if (formData.sinkConfig?.sinkType === "disqualification") {
+      } else if (data.sinkConfig?.sinkType === "disqualification") {
         return {
           border: "border-red-200",
           text: "text-red-800",
@@ -235,13 +228,13 @@ export default function EditableNode({
             {formData.type !== "match" || isEditing ? (
               <div>
                 <div className={`font-semibold text-sm ${config.text}`}>
-                  {formData.type === "sink" &&
-                  formData.sinkConfig?.sinkType === "podium"
-                    ? `Podio #${formData.sinkConfig.position || 1}`
-                    : formData.type === "sink" &&
-                      formData.sinkConfig?.sinkType === "disqualification"
+                  {data.type === "sink" &&
+                  data.sinkConfig?.sinkType === "podium"
+                    ? `Podio #${data.sinkConfig.position || 1}`
+                    : data.type === "sink" &&
+                      data.sinkConfig?.sinkType === "disqualification"
                     ? "Eliminación"
-                    : formData.type === "sink"
+                    : data.type === "sink"
                     ? "Resultado Final"
                     : formData.type.toUpperCase()}
                 </div>
@@ -317,13 +310,6 @@ export default function EditableNode({
                 config={formData.matchConfig}
                 onChange={(config) => handleUpdate("matchConfig", config)}
               />
-            ) : formData.type === "sink" ? (
-              <SinkConfigForm
-                config={formData.sinkConfig}
-                onChange={(config) => handleUpdate("sinkConfig", config)}
-                nodeId={data.id}
-                allNodes={allNodes}
-              />
             ) : null}
 
             {/* Botones de acción */}
@@ -352,6 +338,36 @@ export default function EditableNode({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Información del nodo sink (solo lectura) */}
+      {data.type === "sink" && data.sinkConfig && (
+        <div className="text-left">
+          {data.sinkConfig.sinkType === "podium" ? (
+            <div className="text-center">
+              <div className="text-lg font-bold text-yellow-600 mb-1">
+                🏆 Podio #{data.sinkConfig.position || 1}
+              </div>
+              <div className="text-xs text-yellow-600">
+                {data.sinkConfig.position === 1 && "🥇 Primer Lugar"}
+                {data.sinkConfig.position === 2 && "🥈 Segundo Lugar"}
+                {data.sinkConfig.position === 3 && "🥉 Tercer Lugar"}
+                {data.sinkConfig.position &&
+                  data.sinkConfig.position > 3 &&
+                  `${data.sinkConfig.position}º Lugar`}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="text-lg font-bold text-red-600 mb-1">
+                ❌ Eliminación
+              </div>
+              <div className="text-xs text-red-600">
+                Participante descalificado
+              </div>
+            </div>
+          )}
         </div>
       )}
 
