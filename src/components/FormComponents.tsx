@@ -1,5 +1,6 @@
 import { PencilIcon } from "lucide-react";
 import * as React from "react";
+import { useState } from "react";
 import type {
   ConditionOperator,
   EdgeCondition,
@@ -24,25 +25,65 @@ interface FormFieldProps {
   label: string;
   value: string | number;
   onChange: (value: string | number) => void;
+  onBlur?: () => void;
   type?: "text" | "number" | "select";
   options?: Array<{ value: string | number; label: string }>;
   placeholder?: string;
   error?: string;
   required?: boolean;
   className?: string;
+  validate?: (value: string | number) => string | undefined;
+  previousValue?: string | number; // Para rollback
+  defaultValue?: string | number; // Valor por defecto si no hay valor anterior
 }
 
 export function FormField({
   label,
   value,
   onChange,
+  onBlur,
   type = "text",
   options,
   placeholder,
   className,
   error,
   required = false,
+  validate,
+  previousValue,
+  defaultValue,
 }: FormFieldProps) {
+  const [localError, setLocalError] = useState<string | undefined>(error);
+  const [localValue, setLocalValue] = useState<string>(value?.toString() || "");
+
+  // Sincronizar valor local cuando el valor externo cambie
+  React.useEffect(() => {
+    setLocalValue(value?.toString() || "");
+  }, [value]);
+
+  const handleBlur = () => {
+    if (validate) {
+      const validationError = validate(localValue);
+      if (validationError) {
+        // Si hay error de validación, hacer rollback
+        const rollbackValue =
+          previousValue !== undefined ? previousValue : defaultValue || "";
+        setLocalValue(rollbackValue.toString());
+        onChange(rollbackValue);
+        setLocalError(validationError);
+      } else {
+        // Si es válido, actualizar el valor
+        const finalValue = type === "number" ? Number(localValue) : localValue;
+        onChange(finalValue);
+        setLocalError(undefined);
+      }
+    } else {
+      // Sin validación, solo actualizar
+      const finalValue = type === "number" ? Number(localValue) : localValue;
+      onChange(finalValue);
+    }
+    onBlur?.();
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
       <Label className="text-sm font-medium">
@@ -64,19 +105,23 @@ export function FormField({
         </Select>
       ) : (
         <Input
-          type={type}
-          value={value}
-          onChange={(e) =>
-            onChange(
-              type === "number" ? Number(e.target.value) : e.target.value
-            )
-          }
+          type="text"
+          value={localValue}
+          onChange={(e) => {
+            setLocalError(undefined); // Limpiar error mientras se escribe
+            setLocalValue(e.target.value);
+          }}
+          onBlur={handleBlur}
           placeholder={placeholder}
-          className={error ? "border-destructive" : ""}
+          className={`w-full ${
+            localError || error ? "border-destructive" : ""
+          }`}
         />
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {(localError || error) && (
+        <p className="text-sm text-destructive">{localError || error}</p>
+      )}
     </div>
   );
 }
@@ -115,9 +160,41 @@ export function SinkConfigEditor({ config, onChange }: SinkConfigEditorProps) {
         {config.sinkType === "podium" && (
           <FormField
             label="Posición"
-            value={config.position || 1}
-            onChange={(val) => updateConfig("position", Number(val))}
-            type="number"
+            value={config.position || ""}
+            previousValue={config.position}
+            defaultValue={1}
+            onChange={(val) => {
+              updateConfig("position", val);
+            }}
+            validate={(val) => {
+              if (val === "" || val === undefined) {
+                return "La posición es requerida";
+              }
+              const strVal = val.toString();
+
+              // Verificar si contiene caracteres no numéricos o números negativos
+              if (!/^\d+$/.test(strVal)) {
+                if (/^-/.test(strVal)) {
+                  return "Solo se admiten números positivos";
+                } else if (/[^\d-.]/.test(strVal)) {
+                  return "Solo se admiten números enteros";
+                } else if (/\./.test(strVal)) {
+                  return "Solo se admiten números enteros (sin decimales)";
+                } else {
+                  return "Solo se admiten números enteros positivos";
+                }
+              }
+
+              const numVal = Number(strVal);
+              if (numVal < 1) {
+                return "La posición debe ser mayor a 0";
+              }
+              if (numVal > 100) {
+                return "La posición no puede ser mayor a 100";
+              }
+              return undefined;
+            }}
+            type="text"
             placeholder="1, 2, 3..."
           />
         )}
@@ -187,9 +264,45 @@ export function EdgeConditionEditor({
 
         <FormField
           label="Value"
-          value={condition.value}
-          onChange={(val) => updateCondition("value", Number(val))}
-          type="number"
+          value={
+            condition.value !== undefined ? condition.value.toString() : ""
+          }
+          previousValue={condition.value}
+          defaultValue={0}
+          onChange={(val) => {
+            updateCondition("value", val);
+          }}
+          validate={(val) => {
+            if (val === "" || val === undefined) {
+              return "El valor es requerido";
+            }
+            const strVal = val.toString();
+
+            // Verificar si es un número válido (permite negativos y decimales)
+            if (
+              !/^-?\d*\.?\d*$/.test(strVal) ||
+              strVal === "-" ||
+              strVal === "."
+            ) {
+              if (/[^\d-.]/.test(strVal)) {
+                return "Solo se admiten números y símbolos válidos (-, .)";
+              } else if (strVal === "-") {
+                return "Ingrese un número después del signo negativo";
+              } else if (strVal === ".") {
+                return "Ingrese un número antes o después del punto decimal";
+              } else {
+                return "Formato de número inválido";
+              }
+            }
+
+            const numVal = Number(strVal);
+            if (isNaN(numVal)) {
+              return "Debe ser un número válido";
+            }
+
+            return undefined;
+          }}
+          type="text"
           placeholder="0"
           required
         />
@@ -267,9 +380,41 @@ export function MatchConfigEditor({
       <div className="flex flex-col gap-2">
         <FormField
           label="Participantes"
-          value={config.capacity}
-          onChange={(val) => updateConfig("capacity", Number(val))}
-          type="number"
+          value={config.capacity || ""}
+          previousValue={config.capacity}
+          defaultValue={2}
+          onChange={(val) => {
+            updateConfig("capacity", val);
+          }}
+          validate={(val) => {
+            if (val === "" || val === undefined) {
+              return "La cantidad de participantes es requerida";
+            }
+            const strVal = val.toString();
+
+            // Verificar si contiene caracteres no numéricos o números negativos
+            if (!/^\d+$/.test(strVal)) {
+              if (/^-/.test(strVal)) {
+                return "Solo se admiten números positivos";
+              } else if (/[^\d-.]/.test(strVal)) {
+                return "Solo se admiten números enteros";
+              } else if (/\./.test(strVal)) {
+                return "Solo se admiten números enteros (sin decimales)";
+              } else {
+                return "Solo se admiten números enteros positivos";
+              }
+            }
+
+            const numVal = Number(strVal);
+            if (numVal < 1) {
+              return "Debe haber al menos 1 participante";
+            }
+            if (numVal > 1000) {
+              return "No puede haber más de 1000 participantes";
+            }
+            return undefined;
+          }}
+          type="text"
           placeholder="Cantidad de participantes"
           required
         />

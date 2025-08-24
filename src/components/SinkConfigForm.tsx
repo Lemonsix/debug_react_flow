@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import type { SinkConfiguration, SinkType, GraphNode } from "../types";
 import { validatePodiumPosition } from "../utils/validation";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Schema de validación con Zod
 const sinkConfigSchema = z.object({
@@ -57,6 +57,12 @@ export function SinkConfigForm({
 
   const sinkType = form.watch("sinkType");
 
+  // Guardar el valor anterior para rollback
+  const previousPositionRef = useRef<number | undefined>(config.position);
+
+  // Estado local para el input de posición (permite edición libre)
+  const [localPositionValue, setLocalPositionValue] = useState<string>("");
+
   // Validación de posición duplicada personalizada
   const validatePosition = (position: number) => {
     if (sinkType === "podium") {
@@ -65,6 +71,16 @@ export function SinkConfigForm({
     }
     return true;
   };
+
+  // Inicializar y mantener sincronizado el valor local del input
+  useEffect(() => {
+    if (config.position !== undefined) {
+      previousPositionRef.current = config.position;
+      setLocalPositionValue(config.position.toString());
+    } else {
+      setLocalPositionValue("");
+    }
+  }, [config.position]);
 
   // Sincronizar cambios con el componente padre
   useEffect(() => {
@@ -132,13 +148,39 @@ export function SinkConfigForm({
                   <FormLabel>Posición</FormLabel>
                   <FormControl>
                     <Input
-                      type="number"
+                      type="text"
                       placeholder="1, 2, 3..."
-                      {...field}
-                      value={field.value || ""}
+                      value={localPositionValue}
                       onChange={(e) => {
+                        // Permitir cualquier cambio durante la edición
                         const value = e.target.value;
-                        field.onChange(value ? Number(value) : undefined);
+                        setLocalPositionValue(value);
+                      }}
+                      onBlur={() => {
+                        // Al perder focus, validar y hacer rollback si es necesario
+                        if (
+                          localPositionValue === "" ||
+                          !/^\d+$/.test(localPositionValue)
+                        ) {
+                          // Rollback al valor anterior
+                          const rollbackValue =
+                            previousPositionRef.current || 1;
+                          setLocalPositionValue(rollbackValue.toString());
+                          field.onChange(rollbackValue);
+                        } else {
+                          const numValue = Number(localPositionValue);
+                          if (numValue >= 1 && numValue <= 100) {
+                            // Valor válido, actualizar el form
+                            field.onChange(numValue);
+                          } else {
+                            // Valor fuera de rango, rollback
+                            const rollbackValue =
+                              previousPositionRef.current || 1;
+                            setLocalPositionValue(rollbackValue.toString());
+                            field.onChange(rollbackValue);
+                          }
+                        }
+                        field.onBlur();
                       }}
                       className="w-full"
                     />

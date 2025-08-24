@@ -146,6 +146,53 @@ export default function EditableEdge({
     return edgeData?.outcome || "condition";
   };
 
+  // Generar tooltip descriptivo en lenguaje natural para la condición
+  const getConditionTooltip = () => {
+    const currentCondition = edgeData?.condition || condition;
+
+    if (currentCondition?.field === "default" || isDefault) {
+      return "Los participantes que no cumplan con las otras condiciones del match irán por este flujo";
+    }
+
+    if (!currentCondition) {
+      return "Condición del edge";
+    }
+
+    const { field, operator, value } = currentCondition;
+
+    // Mapear campos a lenguaje natural
+    const fieldNames: Record<string, string> = {
+      points: "puntos",
+      position: "posición",
+      score: "puntuación",
+    };
+
+    // Mapear operadores a lenguaje natural
+    const operatorNames: Record<string, string> = {
+      ">=": "mayor o igual a",
+      "<=": "menor o igual a",
+      "==": "igual a",
+      "!=": "diferente de",
+      ">": "mayor que",
+      "<": "menor que",
+    };
+
+    const fieldName = fieldNames[field] || field;
+    const operatorName = operatorNames[operator] || operator;
+
+    // Generar descripción contextual según el campo
+    switch (field) {
+      case "points":
+        return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán este camino`;
+      case "position":
+        return `Los participantes en ${fieldName} ${operatorName} ${value} continuarán por esta ruta`;
+      case "score":
+        return `Los participantes con ${fieldName} ${operatorName} ${value} tomarán este flujo`;
+      default:
+        return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán esta dirección`;
+    }
+  };
+
   return (
     <>
       {/* Invisible larger path for easier clicking */}
@@ -187,25 +234,22 @@ export default function EditableEdge({
           {!isEditing ? (
             // Mostrar condición como label
             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-sm">
-              {isDefault || condition.field === "default" ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-xs font-medium text-blue-700 cursor-help">
-                      {getConditionLabel()}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      Los participantes que no cumplan con las otras condiciones
-                      del match irán por este flujo
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <span className={`text-xs font-medium text-gray-700`}>
-                  {getConditionLabel()}
-                </span>
-              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={`text-xs font-medium cursor-help ${
+                      isDefault || condition.field === "default"
+                        ? "text-blue-700"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {getConditionLabel()}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{getConditionTooltip()}</p>
+                </TooltipContent>
+              </Tooltip>
               {/* Mostrar botón de edición para todos los edges */}
               <EditToggle
                 isEditing={false}
@@ -258,14 +302,18 @@ export default function EditableEdge({
                     </select>
 
                     <input
-                      type="number"
+                      type="text"
                       value={condition.value}
-                      onChange={(e) =>
-                        setCondition({
-                          ...condition,
-                          value: Number(e.target.value),
-                        })
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Permitir solo números (incluyendo negativos)
+                        if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
+                          setCondition({
+                            ...condition,
+                            value: value === "" ? 0 : Number(value),
+                          });
+                        }
+                      }}
                       className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
                       placeholder="0"
                     />

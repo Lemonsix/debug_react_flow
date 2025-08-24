@@ -2,7 +2,10 @@ import { Handle, Position } from "@xyflow/react";
 import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import type { GraphNode, MatchConfiguration } from "../types";
-import { validateNodeForm } from "../utils/validation";
+import {
+  validateNodeForm,
+  validateTournamentStructure,
+} from "../utils/validation";
 import { MatchConfigEditor } from "./FormComponents";
 import { SinkConfigForm } from "./SinkConfigForm";
 
@@ -70,6 +73,28 @@ export default function EditableNode({
       const updates = { [field]: value };
       setFormData((prev) => ({ ...prev, ...updates }));
 
+      // Validar que el cambio no rompa la estructura mínima del torneo
+      if (
+        field === "type" ||
+        (field === "sinkConfig" &&
+          value &&
+          typeof value === "object" &&
+          "sinkType" in value)
+      ) {
+        const updatedFormData = { ...formData, ...updates };
+        const simulatedNode = { ...data, ...updatedFormData };
+        const otherNodes = allNodes.filter((n) => n.id !== data.id);
+        const allNodesWithUpdate = [...otherNodes, simulatedNode];
+
+        const validation = validateTournamentStructure(allNodesWithUpdate);
+        if (!validation.isValid) {
+          alert(validation.error);
+          // Revertir el cambio
+          setFormData((prev) => ({ ...prev }));
+          return;
+        }
+      }
+
       if (onChange) {
         // Incluir matchConfig en las actualizaciones si es un nodo de match
         if (field === "matchConfig") {
@@ -79,7 +104,7 @@ export default function EditableNode({
         }
       }
     },
-    [onChange]
+    [onChange, formData, data, allNodes]
   );
 
   // Guardar cambios y salir del modo edición

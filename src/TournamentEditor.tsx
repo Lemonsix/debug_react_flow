@@ -1,47 +1,50 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
 import {
-  ReactFlow,
-  ReactFlowProvider,
-  Background,
-  Controls,
-  MiniMap,
-  type Edge,
-  type Node,
-  type NodeProps,
-  type EdgeProps,
-  MarkerType,
-  useNodesState,
-  useEdgesState,
   addEdge,
+  Background,
   type Connection,
-  useReactFlow,
+  Controls,
+  type Edge,
+  type EdgeChange,
+  type EdgeProps,
   getNodesBounds,
   getViewportForBounds,
+  MarkerType,
+  MiniMap,
+  type Node,
   type NodeChange,
-  type EdgeChange,
+  type NodeProps,
   type OnSelectionChangeFunc,
+  ReactFlow,
+  ReactFlowProvider,
+  useEdgesState,
+  useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
+import EditableNode from "./components/EditableNode";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "./components/ui/tooltip";
 import type {
-  TournamentGraph,
-  GraphNode,
+  EdgeCondition,
   GraphEdge,
-  NodeType,
+  GraphNode,
   HistoryAction,
   HistoryActionType,
   HistoryState,
-  EdgeCondition,
+  NodeType,
+  TournamentGraph,
 } from "./types";
-import EditableNode from "./components/EditableNode";
-import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 import { validateDefaultEdges } from "./utils/edgeLogic";
-import { getNextAvailablePodiumPosition } from "./utils/validation";
 import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "./components/ui/tooltip";
+  getNextAvailablePodiumPosition,
+  validateTournamentStructure,
+} from "./utils/validation";
 
 const NODE_W = 400;
 const NODE_H = 280;
@@ -636,6 +639,138 @@ function TournamentEditorInternal({
     });
   }, [rfNodes, rfEdges, setNodes, setEdges]);
 
+  // Función para crear automáticamente la estructura mínima del torneo
+  const createMinimumTournamentStructure = useCallback(() => {
+    if (!editable) return; // Solo crear en modo editable
+
+    const currentNodes = nodes.map((n) => n.data as GraphNode);
+    const timestamp = Date.now();
+
+    // Verificar qué tipos de nodos faltan
+    const hasMatch = currentNodes.some((n) => n.type === "match");
+    const hasPodium = currentNodes.some(
+      (n) => n.type === "sink" && n.sinkConfig?.sinkType === "podium"
+    );
+    const hasDisqualification = currentNodes.some(
+      (n) => n.type === "sink" && n.sinkConfig?.sinkType === "disqualification"
+    );
+
+    const nodesToCreate: Node[] = [];
+
+    // Crear match si no existe (en estado de edición)
+    if (!hasMatch) {
+      const matchId = `node-${timestamp}-match`;
+      const matchNode: GraphNode = {
+        id: matchId,
+        phaseId: graph.phaseId,
+        type: "match",
+        capacity: 2,
+        slots: Array.from({ length: 2 }, (_, i) => ({ index: i })),
+        editable: true, // Match inicia en estado de edición
+        position: { x: 200, y: 200 },
+        matchConfig: {
+          capacity: 2,
+          modalidad: "presencial" as const,
+          scheduledDate: undefined,
+          scheduledTime: undefined,
+        },
+      };
+
+      nodesToCreate.push({
+        id: matchId,
+        type: "editable",
+        data: matchNode,
+        position: { x: 200, y: 200 },
+      });
+    }
+
+    // Crear podio si no existe (NO en estado de edición)
+    if (!hasPodium) {
+      const podiumId = `node-${timestamp}-podium`;
+      const podiumNode: GraphNode = {
+        id: podiumId,
+        phaseId: graph.phaseId,
+        type: "sink",
+        capacity: 0,
+        slots: [],
+        editable: false, // Podio NO inicia en estado de edición
+        position: { x: 800, y: 150 },
+        sinkConfig: {
+          sinkType: "podium",
+          position: 1,
+        },
+      };
+
+      nodesToCreate.push({
+        id: podiumId,
+        type: "editable",
+        data: podiumNode,
+        position: { x: 800, y: 150 },
+      });
+    }
+
+    // Crear eliminación si no existe (NO en estado de edición)
+    if (!hasDisqualification) {
+      const disqualificationId = `node-${timestamp}-disqualification`;
+      const disqualificationNode: GraphNode = {
+        id: disqualificationId,
+        phaseId: graph.phaseId,
+        type: "sink",
+        capacity: 0,
+        slots: [],
+        editable: false, // Eliminación NO inicia en estado de edición
+        position: { x: 800, y: 300 },
+        sinkConfig: {
+          sinkType: "disqualification",
+        },
+      };
+
+      nodesToCreate.push({
+        id: disqualificationId,
+        type: "editable",
+        data: disqualificationNode,
+        position: { x: 800, y: 300 },
+      });
+    }
+
+    // Agregar todos los nodos de una vez
+    if (nodesToCreate.length > 0) {
+      setNodes((nds) => [...nds, ...nodesToCreate]);
+
+      // Agregar al historial como una operación múltiple solo si estamos creando la estructura inicial
+      if (currentNodes.length === 0 && nodesToCreate.length === 3) {
+        addToHistory("ADD_NODE", {
+          nodeIds: nodesToCreate.map((n) => n.id),
+          afterState: nodesToCreate,
+          isInitialStructure: true,
+        });
+
+        // Activar modo de edición para el match si estamos creando la estructura inicial
+        const matchNode = nodesToCreate.find(
+          (n) => (n.data as GraphNode).type === "match"
+        );
+        if (matchNode) {
+          setTimeout(() => {
+            startEditing("node", matchNode.id);
+          }, 100);
+        }
+      }
+    }
+  }, [graph.phaseId, editable, setNodes, addToHistory, nodes, startEditing]);
+
+  // Validar estructura mínima del torneo cuando se cargan los nodos
+  useEffect(() => {
+    const graphNodes = nodes.map((n) => n.data as GraphNode);
+
+    // Si no hay nodos o la estructura no es válida, crear la estructura mínima
+    if (
+      nodes.length === 0 ||
+      !validateTournamentStructure(graphNodes).isValid
+    ) {
+      createMinimumTournamentStructure();
+    }
+  }, [nodes, createMinimumTournamentStructure]);
+
   // Manejar conexiones entre nodos usando las mejores prácticas
   const onConnect = useCallback(
     (params: Connection) => {
@@ -744,7 +879,7 @@ function TournamentEditorInternal({
         afterState: reactFlowNode,
       });
     },
-    [graph.phaseId, editable, setNodes, addToHistory]
+    [graph.phaseId, editable, setNodes, addToHistory, nodes]
   );
 
   // Undo
@@ -1239,6 +1374,22 @@ function TournamentEditorInternal({
       const nodesToDelete = nodes.filter((n) => selectedNodes.includes(n.id));
       const edgesToDelete = edges.filter((e) => selectedEdges.includes(e.id));
 
+      // Validar que después de eliminar los nodos seleccionados, el torneo mantenga su estructura mínima
+      const remainingNodes = nodes.filter((n) => !selectedNodes.includes(n.id));
+      const graphNodes = remainingNodes.map((n) => n.data as GraphNode);
+
+      // Verificar cada nodo que se va a eliminar
+      for (const nodeToDelete of nodesToDelete) {
+        const validation = validateTournamentStructure(
+          graphNodes,
+          nodeToDelete.data as GraphNode
+        );
+        if (!validation.isValid) {
+          alert(validation.error);
+          return;
+        }
+      }
+
       // También eliminar edges conectados a los nodos que se van a eliminar
       const connectedEdges = edges.filter(
         (e) =>
@@ -1275,6 +1426,19 @@ function TournamentEditorInternal({
       // Eliminar nodo individual (lógica existente)
       const nodeToDelete = nodes.find((n) => n.id === selectedNodeId);
       if (!nodeToDelete) return;
+
+      // Validar que después de eliminar el nodo, el torneo mantenga su estructura mínima
+      const remainingNodes = nodes.filter((n) => n.id !== selectedNodeId);
+      const graphNodes = remainingNodes.map((n) => n.data as GraphNode);
+      const validation = validateTournamentStructure(
+        graphNodes,
+        nodeToDelete.data as GraphNode
+      );
+
+      if (!validation.isValid) {
+        alert(validation.error);
+        return;
+      }
 
       const connectedEdges = edges.filter(
         (e) => e.source === selectedNodeId || e.target === selectedNodeId
@@ -1436,6 +1600,27 @@ function TournamentEditorInternal({
                   <p>Un sink es un nodo de podio o de eliminacion</p>
                 </TooltipContent>
               </Tooltip>
+            </div>
+
+            {/* Información sobre estructura mínima requerida */}
+            <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              <div className="font-medium mb-1">
+                Estructura mínima del torneo:
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                  Al menos 1 Match
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  Al menos 1 Podio
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  Al menos 1 Eliminación
+                </span>
+              </div>
             </div>
 
             {/* Exportar */}

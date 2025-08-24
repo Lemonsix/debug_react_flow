@@ -137,20 +137,115 @@ export function getNextAvailablePodiumPosition(allNodes: GraphNode[]): number {
       (node) =>
         node.type === "sink" &&
         node.sinkConfig?.sinkType === "podium" &&
-        node.sinkConfig?.position
+        node.sinkConfig.position
     )
     .map((node) => node.sinkConfig!.position!)
     .sort((a, b) => a - b);
 
-  // Encontrar la primera posición disponible empezando desde 1
-  let nextPosition = 1;
-  for (const position of occupiedPositions) {
-    if (position === nextPosition) {
-      nextPosition++;
-    } else {
-      break;
+  // Si no hay posiciones ocupadas, empezar en 1
+  if (occupiedPositions.length === 0) {
+    return 1;
+  }
+
+  // Buscar el primer gap en las posiciones
+  for (let i = 0; i < occupiedPositions.length; i++) {
+    if (occupiedPositions[i] !== i + 1) {
+      return i + 1;
     }
   }
 
-  return nextPosition;
+  // Si no hay gaps, usar la siguiente posición después de la última
+  return occupiedPositions[occupiedPositions.length - 1] + 1;
+}
+
+/**
+ * Valida que el torneo mantenga la estructura mínima requerida
+ * Un torneo debe tener al menos:
+ * - 1 nodo de match
+ * - 1 nodo de podio
+ * - 1 nodo de eliminación
+ */
+export function validateTournamentStructure(
+  allNodes: GraphNode[],
+  nodeToDelete?: GraphNode
+): { isValid: boolean; error?: string } {
+  // Si no hay nodos, no es válido
+  if (allNodes.length === 0) {
+    return {
+      isValid: false,
+      error: "El torneo debe tener al menos un nodo",
+    };
+  }
+
+  // Filtrar nodos por tipo
+  const matchNodes = allNodes.filter((node) => node.type === "match");
+  const podiumNodes = allNodes.filter(
+    (node) => node.type === "sink" && node.sinkConfig?.sinkType === "podium"
+  );
+  const disqualificationNodes = allNodes.filter(
+    (node) =>
+      node.type === "sink" && node.sinkConfig?.sinkType === "disqualification"
+  );
+
+  // Si vamos a eliminar un nodo, verificar que después de eliminarlo siga siendo válido
+  if (nodeToDelete) {
+    const remainingMatchNodes = matchNodes.filter(
+      (node) => node.id !== nodeToDelete.id
+    );
+    const remainingPodiumNodes = podiumNodes.filter(
+      (node) => node.id !== nodeToDelete.id
+    );
+    const remainingDisqualificationNodes = disqualificationNodes.filter(
+      (node) => node.id !== nodeToDelete.id
+    );
+
+    // Verificar que después de eliminar siga habiendo al menos uno de cada tipo
+    if (remainingMatchNodes.length === 0) {
+      return {
+        isValid: false,
+        error:
+          "No se puede eliminar el nodo. El torneo debe tener al menos un match.",
+      };
+    }
+
+    if (remainingPodiumNodes.length === 0) {
+      return {
+        isValid: false,
+        error:
+          "No se puede eliminar el nodo. El torneo debe tener al menos un podio.",
+      };
+    }
+
+    if (remainingDisqualificationNodes.length === 0) {
+      return {
+        isValid: false,
+        error:
+          "No se puede eliminar el nodo. El torneo debe tener al menos un nodo de eliminación.",
+      };
+    }
+  } else {
+    // Validación para el estado actual (sin eliminar)
+    if (matchNodes.length === 0) {
+      return {
+        isValid: false,
+        error: "El torneo debe tener al menos un nodo de match.",
+      };
+    }
+
+    if (podiumNodes.length === 0) {
+      return {
+        isValid: false,
+        error: "El torneo debe tener al menos un nodo de podio.",
+      };
+    }
+
+    if (disqualificationNodes.length === 0) {
+      return {
+        isValid: false,
+        error: "El torneo debe tener al menos un nodo de eliminación.",
+      };
+    }
+  }
+
+  return { isValid: true };
 }
