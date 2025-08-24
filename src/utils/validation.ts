@@ -5,7 +5,7 @@ import type {
   MatchConfiguration,
   GraphNode,
 } from "../types";
-import type { Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 
 // Validación para formularios de nodo
 export function validateNodeForm(
@@ -258,7 +258,8 @@ export function validateTournamentStructure(
 export function detectCircularDependency(
   sourceNodeId: string,
   targetNodeId: string,
-  existingEdges: Edge[]
+  existingEdges: Edge[],
+  allNodes?: Node[]
 ): { hasCircle: boolean; error?: string } {
   // Si source y target son el mismo nodo, es un ciclo inmediato
   if (sourceNodeId === targetNodeId) {
@@ -266,6 +267,15 @@ export function detectCircularDependency(
       hasCircle: true,
       error: "No se puede conectar un nodo consigo mismo.",
     };
+  }
+
+  // Si el target es un nodo sink, no puede crear ciclos porque los sink son terminales
+  // (no tienen handles de salida, por lo que nunca pueden ser source de otro edge)
+  if (allNodes) {
+    const targetNode = allNodes.find((node) => node.id === targetNodeId);
+    if (targetNode && (targetNode.data as any)?.type === "sink") {
+      return { hasCircle: false }; // Los nodos sink no pueden crear ciclos
+    }
   }
 
   // Crear un mapa de adyacencia del grafo actual
@@ -328,8 +338,17 @@ export function detectCircularDependency(
 export function findCircularPath(
   sourceNodeId: string,
   targetNodeId: string,
-  existingEdges: Edge[]
+  existingEdges: Edge[],
+  allNodes?: Node[]
 ): string[] | null {
+  // Si el target es un nodo sink, no puede crear ciclos
+  if (allNodes) {
+    const targetNode = allNodes.find((node) => node.id === targetNodeId);
+    if (targetNode && (targetNode.data as any)?.type === "sink") {
+      return null; // Los nodos sink no pueden crear ciclos
+    }
+  }
+
   // Crear mapa de adyacencia
   const adjacencyMap = new Map<string, string[]>();
 

@@ -781,7 +781,8 @@ function TournamentEditorInternal({
       const circularCheck = detectCircularDependency(
         params.source,
         params.target,
-        edges
+        edges,
+        nodes
       );
 
       if (circularCheck.hasCircle) {
