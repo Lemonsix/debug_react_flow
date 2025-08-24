@@ -15,6 +15,7 @@ import type {
 import { EditToggle } from "./FormComponents";
 import { validateEdgeCondition } from "../utils/validation";
 import { getEdgeSwitchLogic } from "../utils/edgeLogic";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface EditableEdgeData extends GraphEdge {
   label?: string;
@@ -186,13 +187,25 @@ export default function EditableEdge({
           {!isEditing ? (
             // Mostrar condición como label
             <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 shadow-sm">
-              <span
-                className={`text-xs font-medium ${
-                  isDefault ? "text-blue-700" : "text-gray-700"
-                }`}
-              >
-                {getConditionLabel()}
-              </span>
+              {isDefault || condition.field === "default" ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-xs font-medium text-blue-700 cursor-help">
+                      {getConditionLabel()}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Los participantes que no cumplan con las otras condiciones
+                      del match irán por este flujo
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <span className={`text-xs font-medium text-gray-700`}>
+                  {getConditionLabel()}
+                </span>
+              )}
               {/* Mostrar botón de edición para todos los edges */}
               <EditToggle
                 isEditing={false}
