@@ -1800,7 +1800,7 @@ function TournamentEditorInternal({
   }, [edges, nodes]);
 
   return (
-    <div className="h-[80vh] w-full rounded-lg border border-gray-200 bg-gray-50 relative">
+    <div className="h-[90vh] w-full rounded-lg border border-gray-200 bg-gray-50 relative">
       {/* Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
         {editable && (
