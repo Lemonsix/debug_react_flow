@@ -479,7 +479,7 @@ export function debugCircularDependency(
   existingEdges: Edge[],
   allNodes?: Node[]
 ): void {
-  console.log("🔍 DEBUGGING DEPENDENCIA CIRCULAR");
+
   console.log("==================================");
   console.log(`Intentando conectar: ${sourceNodeId} → ${targetNodeId}`);
   console.log(`Total de edges existentes: ${existingEdges.length}`);

@@ -52,6 +52,18 @@
    - ✅ **Historial Completo**: Todas las eliminaciones se registran en el historial
    - ✅ **Lógica de Torneo**: Mantiene la integridad del flujo del torneo
 
+8. **Inicialización Inteligente del Selector**:
+   - ✅ **Detección Automática**: El sistema detecta si ya existe un edge default
+   - ✅ **Inicialización Condicional**: Si ya hay default, inicia en "Victoria por Score"
+   - ✅ **Evita Duplicación**: Previene crear múltiples edges de "Derrota"
+   - ✅ **Experiencia Intuitiva**: El selector siempre muestra la opción más apropiada
+
+9. **Campos Condicionales**:
+   - ✅ **Ocultación Inteligente**: Los campos de operador y valor solo se muestran cuando es necesario
+   - ✅ **Para "Derrota"**: Solo se muestra el selector, sin campos adicionales
+   - ✅ **Para Victoria**: Se muestran operador lógico y valor numérico
+   - ✅ **Lógica Unificada**: `{condition.field !== "default" && (...)}` para todos los esports
+
 #### **Beneficios de la Implementación**
 
 - ✅ **UI Intuitiva**: Selector simple para esports competitivos

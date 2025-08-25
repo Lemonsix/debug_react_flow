@@ -92,6 +92,21 @@ Cuando se crea un nuevo edge:
 - **Edición Automática**: Los edges nuevos se abren automáticamente para edición
 - **Labels Descriptivos**: Los edges de score se muestran con labels descriptivos según el esport
 
+### Inicialización Inteligente del Selector
+
+El selector de condiciones se inicializa de manera inteligente:
+- **Si es el primer edge del nodo**: Se inicia en "Derrota" (default)
+- **Si ya existe un edge default**: Se inicia en "Victoria por Score" (para evitar duplicar "Derrota")
+- **Lógica**: `field: isDefault ? "default" : (hasDefaultEdge ? "score" : "default")`
+
+### Campos Condicionales
+
+Los campos de operador y valor solo se muestran cuando es necesario:
+- **Para "Derrota"**: Solo se muestra el selector, sin campos adicionales
+- **Para esports competitivos**: Solo se muestra el selector (BO1/BO3/BO5), sin campos adicionales
+- **Para Fortnite**: Se muestran operador lógico y valor numérico para condiciones de victoria
+- **Lógica**: `{condition.field !== "default" && esport === "fortnite" && (...)}`
+
 ### Eliminación de "Points"
 - ❌ **Antes**: Los edges se creaban con `field: "points"` (obsoleto)
 - ✅ **Ahora**: Los edges se crean con `field: "score"` (estándar)
@@ -166,6 +181,99 @@ const getConnectionLabel = () => {
   if (esport !== "fortnite") return "Ganador";
   return "Victoria";
 };
+```
+
+### Inicialización Inteligente del Selector
+
+#### **Lógica de Detección de Edge Default**
+```typescript
+// Determinar si ya existe un edge default para este nodo
+const hasDefaultEdge = useMemo(() => {
+  if (isDefault) return true; // Este edge es el default
+  // Verificar si ya existe otro edge default para el mismo nodo source
+  return allEdges.some(edge => 
+    edge.source === edgeData.fromNode && 
+    edge.id !== id && 
+    (edge.data as GraphEdge)?.isDefault === true
+  );
+}, [isDefault, allEdges, edgeData.fromNode, id]);
+```
+
+#### **Inicialización Condicional del Estado**
+```typescript
+const [condition, setCondition] = useState<EdgeCondition>(
+  edgeData?.condition || {
+    field: isDefault ? "default" : (hasDefaultEdge ? "score" : "default"),
+    operator: isDefault ? ">=" : (hasDefaultEdge ? ">" : ">="),
+    value: isDefault ? 0 : (hasDefaultEdge ? 0 : 0),
+  }
+);
+```
+
+#### **Lógica del Selector para Esports Competitivos**
+```typescript
+value={
+  condition.field === "default" 
+    ? "default"
+    : condition.field === "score" && condition.operator === ">" && condition.value === 0
+    ? "bo1"
+    : condition.field === "score" && condition.operator === ">" && condition.value === 1
+    ? "bo3"
+    : condition.field === "score" && condition.operator === ">" && condition.value === 2
+    ? "bo5"
+    : "default"
+}
+```
+
+#### **Aplicación en Cancelar Edición**
+```typescript
+const handleCancel = useCallback(() => {
+  setCondition(
+    edgeData?.condition || {
+      field: isDefault ? "default" : (hasDefaultEdge ? "score" : "default"),
+      operator: ">=",
+      value: 0,
+    }
+  );
+  onStopEditing?.();
+}, [edgeData?.condition, onStopEditing, isDefault, hasDefaultEdge]);
+```
+
+#### **Campos Condicionales**
+```typescript
+// Solo mostrar operador y valor si no es default (para cualquier esport)
+{condition.field !== "default" && (
+  <>
+    <select value={condition.operator} onChange={...}>
+      <option value=">=">&ge;</option>
+      <option value="<=">&le;</option>
+      {/* ... más opciones ... */}
+    </select>
+    
+    <input 
+      type="text" 
+      value={condition.value} 
+      onChange={...}
+      placeholder="0"
+    />
+  </>
+)}
+```
+
+#### **Sincronización Inteligente del Estado**
+```typescript
+useEffect(() => {
+  if (edgeData?.condition && !isEditing) {
+    setCondition(edgeData.condition);
+  } else if (!edgeData?.condition && !isEditing) {
+    // Si no hay condición y no estamos editando, usar la lógica inteligente
+    setCondition({
+      field: isDefault ? "default" : (hasDefaultEdge ? "score" : "default"),
+      operator: ">=",
+      value: 0,
+    });
+  }
+}, [edgeData?.condition, isEditing, isDefault, hasDefaultEdge]);
 ```
 
 ### Validación de Podios

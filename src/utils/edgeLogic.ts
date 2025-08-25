@@ -115,8 +115,9 @@ export function getEdgeSwitchLogic(
 
 /**
  * Valida que siempre haya exactamente un edge default por nodo
+ * Retorna los edges modificados para que se actualice el estado
  */
-export function validateDefaultEdges(edges: Edge[]): void {
+export function validateDefaultEdges(edges: Edge[]): Edge[] {
   const nodeGroups = new Map<string, Edge[]>();
 
   // Agrupar edges por nodo source
@@ -195,4 +196,6 @@ export function validateDefaultEdges(edges: Edge[]): void {
       });
     }
   });
+  
+  return edges;
 }

@@ -69,20 +69,62 @@ export default function EditableEdge({
 
   const switchLogic = getEdgeSwitchLogic(currentEdge, allEdges, targetNode);
   const { isDefault, color } = switchLogic;
-  const [condition, setCondition] = useState<EdgeCondition>(
-    edgeData?.condition || {
+  
+
+  
+  // Determinar si ya existe un edge default para este nodo
+  const hasDefaultEdge = useMemo(() => {
+    if (isDefault) return true; // Este edge es el default
+    // Verificar si ya existe otro edge default para el mismo nodo source
+    return allEdges.some(edge => 
+      edge.source === edgeData.fromNode && 
+      edge.id !== id && 
+      (edge.data as GraphEdge)?.isDefault === true
+    );
+  }, [isDefault, allEdges, edgeData.fromNode, id]);
+
+  const [condition, setCondition] = useState<EdgeCondition>(() => {
+    const initialCondition = edgeData?.condition || {
       field: isDefault ? "default" : "score",
-      operator: ">=",
-      value: 0,
-    }
-  );
+      operator: isDefault ? ">=" : ">",
+      value: isDefault ? 0 : 0,
+    };
+    
+    return initialCondition;
+  });
 
   // Sincronizar estado local cuando cambien los datos del parent
   useEffect(() => {
     if (edgeData?.condition && !isEditing) {
       setCondition(edgeData.condition);
     }
-  }, [edgeData?.condition, isEditing]);
+    // Removemos la lógica de reinicialización automática para evitar conflictos
+  }, [edgeData?.condition, isEditing, id, condition]);
+
+  // Efecto para actualizar la condición cuando cambie la lógica de switch
+  useEffect(() => {
+    // Si no hay condición en edgeData y no estamos editando, actualizar según la lógica
+    if (!edgeData?.condition && !isEditing) {
+      const shouldBeDefault = isDefault;
+      const newCondition: EdgeCondition = {
+        field: shouldBeDefault ? "default" : "score",
+        operator: shouldBeDefault ? ">=" : ">",
+        value: shouldBeDefault ? 0 : 0,
+      };
+      
+      setCondition(newCondition);
+    }
+  }, [isDefault, isEditing, edgeData?.condition, id, condition]);
+
+  // Efecto para sincronizar cuando edgeData cambie (por ejemplo, después de validateDefaultEdges)
+  useEffect(() => {
+    if (edgeData?.condition && !isEditing) {
+      // Solo actualizar si la condición local es diferente
+      if (JSON.stringify(edgeData.condition) !== JSON.stringify(condition)) {
+        setCondition(edgeData.condition);
+      }
+    }
+  }, [edgeData?.condition, isEditing, id, condition]);
 
   // Calcular path del edge
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -134,15 +176,15 @@ export default function EditableEdge({
 
   // Cancelar edición
   const handleCancel = useCallback(() => {
-            setCondition(
-          edgeData?.condition || {
-            field: isDefault ? "default" : "score",
-            operator: ">=",
-            value: 0,
-          }
-        );
+    const cancelCondition = edgeData?.condition || {
+      field: isDefault ? "default" : (hasDefaultEdge ? "score" : "default"),
+      operator: isDefault ? ">=" : (hasDefaultEdge ? ">" : ">="),
+      value: isDefault ? 0 : (hasDefaultEdge ? 0 : 0),
+    };
+    
+    setCondition(cancelCondition);
     onStopEditing?.();
-  }, [edgeData?.condition, onStopEditing, isDefault]);
+  }, [edgeData?.condition, onStopEditing, isDefault, hasDefaultEdge, id]);
 
 
 
@@ -354,8 +396,14 @@ export default function EditableEdge({
                 <div className="mb-2">
                   <select
                     value={
-                      condition.field === "score" && condition.operator === ">" && condition.value >= 0
-                        ? `bo${condition.value + 1}`
+                      condition.field === "default" 
+                        ? "default"
+                        : condition.field === "score" && condition.operator === ">" && condition.value === 0
+                        ? "bo1"
+                        : condition.field === "score" && condition.operator === ">" && condition.value === 1
+                        ? "bo3"
+                        : condition.field === "score" && condition.operator === ">" && condition.value === 2
+                        ? "bo5"
                         : "default"
                     }
                     onChange={(e) => {
@@ -389,7 +437,7 @@ export default function EditableEdge({
                     className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-24"
                   >
                     <option value="default">Derrota</option>
-                    <option value="bo1">Ganador BO1</option>
+                    <option value="bo1" >Ganador BO1</option>
                     <option value="bo3">Ganador BO3</option>
                     <option value="bo5">Ganador BO5</option>
                   </select>
@@ -436,7 +484,7 @@ export default function EditableEdge({
                     <option value="victoria-score">Victoria por Score</option>
                   </select>
 
-                  {/* Campos configurables para victoria en Fortnite */}
+                  {/* Campos configurables para victoria en Fortnite - NO mostrar para Derrota */}
                   {condition.field !== "default" && esport === "fortnite" && (
                     <div className="flex gap-1">
                       <select
@@ -478,8 +526,9 @@ export default function EditableEdge({
                 </div>
               )}
 
-              {/* Solo mostrar operador y valor si no es default y no es Fortnite */}
-              {condition.field !== "default" && esport !== "fortnite" && (
+              {/* Solo mostrar operador y valor si no es default Y es Fortnite */}
+              {/* DEBUG: condition.field = {condition.field}, isDefault = {isDefault}, hasDefaultEdge = {hasDefaultEdge} */}
+              {condition.field !== "default" && esport === "fortnite" && (
                 <>
                   <select
                     value={condition.operator}
@@ -540,14 +589,14 @@ export default function EditableEdge({
                         }`
                   }
                 >
-                  Save
+                  Guardar
                 </button>
                 <button
                   onClick={handleCancel}
                   className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors min-w-12"
                   title="Cancel"
                 >
-                  Cancel
+                  Cancelar
                 </button>
               </div>
             </div>

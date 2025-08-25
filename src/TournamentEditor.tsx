@@ -928,18 +928,20 @@ function TournamentEditorInternal({
           id: newEdgeId,
           fromNode: params.source,
           toNode: params.target,
-          outcome: isFirstEdge ? "default" : "score >= 0",
+          outcome: isFirstEdge ? "default" : "score > 0",
           editable: true,
           isDefault: isFirstEdge,
           condition: {
             field: isFirstEdge ? ("default" as const) : ("score" as const),
-            operator: ">=" as const,
+            operator: isFirstEdge ? (">=" as const) : (">" as const),
             value: 0,
           },
         },
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { strokeWidth: 1.5 },
       };
+
+
 
       // Usar la utilidad addEdge de React Flow para mejor rendimiento
       setEdges((eds) => {
@@ -972,8 +974,8 @@ function TournamentEditorInternal({
         }
         
         // Validar que la lógica de default sea correcta
-        validateDefaultEdges(newEdges);
-        return newEdges;
+        const validatedEdges = validateDefaultEdges(newEdges);
+        return validatedEdges;
       });
 
       // Abrir automáticamente el edge nuevo para edición (solo si no es el edge default)
