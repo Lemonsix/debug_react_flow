@@ -40,6 +40,12 @@
    - ✅ **Edición Automática**: Los edges nuevos se abren automáticamente para edición
    - ✅ **Labels Descriptivos**: Fortnite muestra labels en lenguaje natural (ej: "Top 10", "Score 50 o más")
 
+6. **Sistema de "Ghost" Personalizado**:
+   - ✅ **Visualización en Tiempo Real**: Mientras arrastras un edge, ves exactamente qué tipo se va a crear
+   - ✅ **Colores Diferenciados**: Rojo punteado para default, verde para competitivos, azul para Fortnite
+   - ✅ **Labels Contextuales**: "Derrota", "Ganador" o "Victoria" según el contexto
+   - ✅ **Detección Automática**: El sistema detecta automáticamente si será edge default o no
+
 #### **Beneficios de la Implementación**
 
 - ✅ **UI Intuitiva**: Selector simple para esports competitivos

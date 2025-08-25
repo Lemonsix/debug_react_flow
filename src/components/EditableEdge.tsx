@@ -168,11 +168,11 @@ export default function EditableEdge({
           // Para edges de ganador basados en score, usar BO1, BO3, BO5
           if (currentCondition.field === "score" && currentCondition.operator === ">") {
             if (currentCondition.value === 0) {
-              return "BO1"; // score > 0
+              return "Ganador BO1";
             } else if (currentCondition.value === 1) {
-              return "BO3"; // score > 1
+              return "Ganador BO3"; // score > 1
             } else if (currentCondition.value === 2) {
-              return "BO5"; // score > 2
+              return "Ganador BO5"; // score > 2
             }
           }
           // Para otros casos, usar el label genérico del esport

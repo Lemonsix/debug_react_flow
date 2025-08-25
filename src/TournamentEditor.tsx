@@ -24,11 +24,13 @@ import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 import EditableNode from "./components/EditableNode";
+import CustomConnectionLine from "./components/ConnectionLine";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "./components/ui/tooltip";
+import { useConnectionState } from "./hooks/useConnectionState";
 import type {
   EdgeCondition,
   EsportType,
@@ -90,6 +92,9 @@ function TournamentEditorInternal({
 
   // Estado para detectar cuando se está arrastrando un nodo
   const [isDraggingNode, setIsDraggingNode] = useState(false);
+
+  // Hook para manejar el estado de la conexión
+  const { connectionStart, startConnection, endConnection } = useConnectionState();
 
   // Funciones para manejar el estado de edición global
   const startEditing = useCallback((type: "node" | "edge", id: string) => {
@@ -195,6 +200,20 @@ function TournamentEditorInternal({
   // Estado para nodos y edges con manejo optimizado
   const [nodes, setNodes, onNodesChange] = useNodesState(rfNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(rfEdges);
+
+  // Funciones para manejar el estado de la conexión
+  const handleConnectStart = useCallback(
+    (_event: MouseEvent | TouchEvent, params: { nodeId: string | null }) => {
+      if (params.nodeId) {
+        startConnection(params.nodeId, nodes, edges);
+      }
+    },
+    [startConnection, nodes, edges]
+  );
+
+  const handleConnectEnd = useCallback(() => {
+    endConnection();
+  }, [endConnection]);
 
   // Función para auto-guardar y cerrar nodo en edición
   const autoSaveAndCloseEditing = useCallback(() => {
@@ -1813,6 +1832,8 @@ function TournamentEditorInternal({
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
+        onConnectStart={handleConnectStart}
+        onConnectEnd={handleConnectEnd}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onNodeDrag={onNodeDrag}
@@ -1821,6 +1842,13 @@ function TournamentEditorInternal({
         onContextMenu={onContextMenu}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        connectionLineComponent={(props) => (
+          <CustomConnectionLine
+            {...props}
+            esport={esport}
+            isDefault={connectionStart?.isDefault || false}
+          />
+        )}
         nodesDraggable={editable}
         nodesConnectable={editable}
         elementsSelectable={editable}
@@ -1847,6 +1875,8 @@ function TournamentEditorInternal({
         <MiniMap pannable zoomable nodeColor="#6b7280" />
         <Controls />
         <Background />
+        
+
       </ReactFlow>
 
       {/* Status Bar */}

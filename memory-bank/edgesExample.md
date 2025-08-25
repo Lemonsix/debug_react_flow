@@ -97,7 +97,70 @@ Cuando se crea un nuevo edge:
 - ✅ **Ahora**: Los edges se crean con `field: "score"` (estándar)
 - 🔄 **Migración**: Todos los edges existentes se actualizan automáticamente
 
+### Sistema de "Ghost" Personalizado
+- 🎯 **Visualización en Tiempo Real**: Mientras arrastras un edge, ves exactamente qué tipo se va a crear
+- 🎨 **Colores Diferenciados**: 
+  - 🔴 **Rojo punteado**: Edge default (derrota)
+  - 🟢 **Verde sólido**: Edge de victoria para esports competitivos
+  - 🔵 **Azul sólido**: Edge configurable para Fortnite
+- 📝 **Labels Informativos**: Se muestra "Derrota", "Ganador" o "Victoria" según el contexto
+- 🔄 **Detección Automática**: El sistema detecta automáticamente si será edge default o no
+
 ## Implementación Técnica
+
+### Sistema de "Ghost" Personalizado
+
+#### **Componentes Clave**
+1. **`CustomConnectionLine`**: Componente que renderiza la línea de conexión personalizada
+2. **`useConnectionState`**: Hook que detecta el estado de la conexión
+3. **Event Handlers**: `onConnectStart` y `onConnectEnd` para detectar el drag
+
+#### **Lógica de Detección**
+```typescript
+// Determinar si el edge que se va a crear será default
+const determineIfDefault = (sourceNodeId: string, allEdges: Edge[]): boolean => {
+  // Si es el primer edge del nodo, será default
+  const nodeEdges = allEdges.filter((edge) => edge.source === sourceNodeId);
+  return nodeEdges.length === 0;
+};
+```
+
+#### **Estilos Visuales**
+```typescript
+// Para edges default (derrota)
+if (isDefault) {
+  return {
+    stroke: "#ef4444",        // Rojo
+    strokeWidth: 3,
+    strokeDasharray: "5,5",   // Línea punteada
+  };
+}
+
+// Para esports competitivos (victoria)
+if (esport !== "fortnite") {
+  return {
+    stroke: "#10b981",        // Verde
+    strokeWidth: 3,
+    strokeDasharray: "none",  // Línea sólida
+  };
+}
+
+// Para Fortnite (configurable)
+return {
+  stroke: "#3b82f6",         // Azul
+  strokeWidth: 3,
+  strokeDasharray: "none",   // Línea sólida
+};
+```
+
+#### **Labels Contextuales**
+```typescript
+const getConnectionLabel = () => {
+  if (isDefault) return "Derrota";
+  if (esport !== "fortnite") return "Ganador";
+  return "Victoria";
+};
+```
 
 ### Lógica de Labels
 ```typescript
