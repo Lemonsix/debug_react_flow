@@ -18,6 +18,14 @@ import { validateEdgeCondition } from "../utils/validation";
 import { getEdgeSwitchLogic } from "../utils/edgeLogic";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { getEsportConfig } from "../config/esports";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Input } from "./ui/input";
 
 interface EditableEdgeData extends GraphEdge {
   label?: string;
@@ -394,20 +402,7 @@ export default function EditableEdge({
               {/* Para esports competitivos, mostrar selector de BO1/BO3/BO5 */}
               {esport !== "fortnite" ? (
                 <div className="mb-2">
-                  <select
-                    value={
-                      condition.field === "default" 
-                        ? "default"
-                        : condition.field === "score" && condition.operator === ">" && condition.value === 0
-                        ? "bo1"
-                        : condition.field === "score" && condition.operator === ">" && condition.value === 1
-                        ? "bo3"
-                        : condition.field === "score" && condition.operator === ">" && condition.value === 2
-                        ? "bo5"
-                        : "default"
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
+                  <Select onValueChange={(value) => {
                       if (value === "default") {
                         setCondition({
                           field: "default",
@@ -433,30 +428,32 @@ export default function EditableEdge({
                           value: 2,
                         });
                       }
-                    }}
-                    className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-24"
-                  >
-                    <option value="default">Derrota</option>
-                    <option value="bo1" >Ganador BO1</option>
-                    <option value="bo3">Ganador BO3</option>
-                    <option value="bo5">Ganador BO5</option>
-                  </select>
+                    }} value={
+                      condition.field === "default" 
+                        ? "default"
+                        : condition.field === "score" && condition.operator === ">" && condition.value === 0
+                        ? "bo1"
+                        : condition.field === "score" && condition.operator === ">" && condition.value === 1
+                        ? "bo3"
+                        : condition.field === "score" && condition.operator === ">" && condition.value === 2
+                        ? "bo5"
+                        : "default"
+                    }>
+                    <SelectTrigger className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none min-w-fit">
+                      <SelectValue placeholder="Derrota" />
+                    </SelectTrigger>
+                    <SelectContent >
+                      <SelectItem value="default" >Derrota</SelectItem>
+                      <SelectItem value="bo1" >Ganador BO1</SelectItem>
+                      <SelectItem value="bo3">Ganador BO3</SelectItem>
+                      <SelectItem value="bo5">Ganador BO5</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : (
                 // Para Fortnite, mostrar selector personalizado con campos configurables
                 <div className="mb-2 space-y-2">
-                  <select
-                    value={
-                      condition.field === "default" 
-                        ? "derrota" 
-                        : condition.field === "position"
-                        ? "victoria-posicion"
-                        : condition.field === "score"
-                        ? "victoria-score"
-                        : "custom"
-                    }
-                    onChange={(e) => {
-                      const value = e.target.value;
+                  <Select onValueChange={(value) => {
                       if (value === "derrota") {
                         setCondition({
                           field: "default",
@@ -476,36 +473,48 @@ export default function EditableEdge({
                           value: 50, // Score mínimo por defecto
                         });
                       }
-                    }}
-                    className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-32"
-                  >
-                    <option value="derrota">Derrota</option>
-                    <option value="victoria-posicion">Victoria por Posición</option>
-                    <option value="victoria-score">Victoria por Score</option>
-                  </select>
+                    }} value={
+                      condition.field === "default" 
+                        ? "derrota" 
+                        : condition.field === "position"
+                        ? "victoria-posicion"
+                        : condition.field === "score"
+                        ? "victoria-score"
+                        : "custom"
+                    }>
+                    <SelectTrigger className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-32">
+                      <SelectValue placeholder="Derrota" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="derrota">Derrota</SelectItem>
+                      <SelectItem value="victoria-posicion">Victoria por Posición</SelectItem>
+                      <SelectItem value="victoria-score">Victoria por Score</SelectItem>
+                    </SelectContent>
+                  </Select>
 
                   {/* Campos configurables para victoria en Fortnite - NO mostrar para Derrota */}
                   {condition.field !== "default" && esport === "fortnite" && (
                     <div className="flex gap-1">
-                      <select
-                        value={condition.operator}
-                        onChange={(e) =>
+                      <Select onValueChange={(value) =>
                           setCondition({
                             ...condition,
-                            operator: e.target.value as ConditionOperator,
+                            operator: value as ConditionOperator,
                           })
-                        }
-                        className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10"
-                      >
-                        <option value=">=">&ge;</option>
-                        <option value="<=">&le;</option>
-                        <option value="==">=</option>
-                        <option value="!=">≠</option>
-                        <option value=">">&gt;</option>
-                        <option value="<">&lt;</option>
-                      </select>
+                        } value={condition.operator}>
+                        <SelectTrigger className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10">
+                          <SelectValue placeholder=">=" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value=">=">&ge;</SelectItem>
+                          <SelectItem value="<=">&le;</SelectItem>
+                          <SelectItem value="==">=</SelectItem>
+                          <SelectItem value="!=">≠</SelectItem>
+                          <SelectItem value=">">&gt;</SelectItem>
+                          <SelectItem value="<">&lt;</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-                      <input
+                      <Input
                         type="text"
                         value={condition.value}
                         onChange={(e) => {
@@ -530,25 +539,26 @@ export default function EditableEdge({
               {/* DEBUG: condition.field = {condition.field}, isDefault = {isDefault}, hasDefaultEdge = {hasDefaultEdge} */}
               {condition.field !== "default" && esport === "fortnite" && (
                 <>
-                  <select
-                    value={condition.operator}
-                    onChange={(e) =>
+                  <Select onValueChange={(value) =>
                       setCondition({
                         ...condition,
-                        operator: e.target.value as ConditionOperator,
+                        operator: value as ConditionOperator,
                       })
-                    }
-                    className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10"
-                  >
-                    <option value=">=">&ge;</option>
-                    <option value="<=">&le;</option>
-                    <option value="==">=</option>
-                    <option value="!=">≠</option>
-                    <option value=">">&gt;</option>
-                    <option value="<">&lt;</option>
-                  </select>
+                    } value={condition.operator}>
+                    <SelectTrigger className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10">
+                      <SelectValue placeholder=">=" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value=">=">&ge;</SelectItem>
+                      <SelectItem value="<=">&le;</SelectItem>
+                      <SelectItem value="==">=</SelectItem>
+                      <SelectItem value="!=">≠</SelectItem>
+                      <SelectItem value=">">&gt;</SelectItem>
+                      <SelectItem value="<">&lt;</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                  <input
+                  <Input
                     type="text"
                     value={condition.value}
                     onChange={(e) => {

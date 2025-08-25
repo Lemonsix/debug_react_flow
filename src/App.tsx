@@ -2,6 +2,13 @@ import { useState } from "react";
 import TournamentEditor from "./TournamentEditor";
 import type { TournamentGraph, EsportType } from "./types";
 import "@xyflow/react/dist/style.css";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/ui/select";
 
 // Función para generar un grafo inicial vacío
 function createInitialGraph(): TournamentGraph {
@@ -41,25 +48,27 @@ export default function App() {
           <label htmlFor="esport-select" className="block text-sm font-medium text-gray-700 mb-2">
             Seleccionar Esport:
           </label>
-                      <select
-              id="esport-select"
-              value={currentGraph.esport}
-              onChange={(e) => {
-                const newEsport = e.target.value as EsportType;
-                setCurrentGraph(prev => ({
-                  ...prev,
-                  esport: newEsport
-                }));
-              }}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="cs2">CS2</option>
-              <option value="valorant">Valorant</option>
-              <option value="fifa">FIFA</option>
-              <option value="clash-royale">Clash Royale</option>
-              <option value="teamfight-tactics">Teamfight Tactics</option>
-              <option value="fortnite">Fortnite</option>
-            </select>
+          <Select
+            value={currentGraph.esport}
+            onValueChange={(newEsport: EsportType) => {
+              setCurrentGraph(prev => ({
+                ...prev,
+                esport: newEsport
+              }));
+            }}
+          >
+            <SelectTrigger className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <SelectValue placeholder="Seleccionar esport" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cs2">CS2</SelectItem>
+              <SelectItem value="valorant">Valorant</SelectItem>
+              <SelectItem value="fifa">FIFA</SelectItem>
+              <SelectItem value="clash-royale">Clash Royale</SelectItem>
+              <SelectItem value="teamfight-tactics">Teamfight Tactics</SelectItem>
+              <SelectItem value="fortnite">Fortnite</SelectItem>
+            </SelectContent>
+          </Select>
       </div>
 
       {/* Main Content - Usar solo TournamentEditor */}
