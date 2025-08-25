@@ -1,5 +1,30 @@
 export type NodeType = "match" | "sink";
 
+// Nuevos tipos para esports
+export type EsportType = 
+  | "cs2" 
+  | "valorant" 
+  | "fifa" 
+  | "clash-royale" 
+  | "teamfight-tactics" 
+  | "default";
+
+export type EsportConfiguration = {
+  maxTeamsPerMatch: number;
+  edgeLabels: {
+    winner: string;
+    loser: string;
+    bo1?: string;
+    bo3?: string;
+    bo5?: string;
+  };
+  validationRules: {
+    allowMultipleTeams: boolean;
+    requireEvenTeams: boolean;
+    maxMatchesPerTeam?: number;
+  };
+};
+
 export type MatchModalidad = "presencial" | "online";
 
 export type MatchConfiguration = {
@@ -102,7 +127,7 @@ export type TournamentGraph = {
   edges: GraphEdge[];
   // Nuevas propiedades para configuración global
   editable?: boolean;
-  esport?: string; // Movido a nivel grafo/torneo
+  esport: EsportType; // Ahora es obligatorio
   metadata?: {
     createdAt?: string;
     lastModified?: string;

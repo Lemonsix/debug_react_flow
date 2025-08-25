@@ -3,9 +3,46 @@
 ## Estado Actual
 - **Proyecto**: Editor de Torneos con React Flow
 - **Modo**: Funcionalidades implementadas y código completamente optimizado
-- **Última tarea**: ✅ Eliminado archivo SinkConfigForm.tsx innecesario
+- **Última tarea**: ✅ Implementada funcionalidad completa de esports con sistema BO1/BO3/BO5
 
 ## Funcionalidades Implementadas Recientemente
+
+### ✅ **Funcionalidad Completa de Esports - COMPLETADA**
+
+#### **Cambios Implementados**
+
+1. **Sistema de Esports Integrado**:
+   - ✅ Prop `esport` obligatorio en `TournamentEditor`
+   - ✅ Configuraciones específicas por esport en `src/config/esports.ts`
+   - ✅ Validaciones automáticas según reglas del esport
+   - ✅ Theming visual adaptado al contexto del deporte
+
+2. **Validaciones de Nodos Match**:
+   - ✅ Esports competitivos (CS2, Valorant, FIFA, etc.) solo permiten 2 equipos
+   - ✅ Campo de capacidad oculto para esports competitivos
+   - ✅ Capacidad fija en 2 equipos automáticamente
+   - ✅ Mensajes informativos para esports competitivos
+
+3. **Sistema de Edges BO1/BO3/BO5**:
+   - ✅ Selector simple para esports competitivos: "Derrota", "Ganador BO1", "BO3", "BO5"
+   - ✅ Labels automáticos: "Derrota", "BO1", "BO3", "BO5"
+   - ✅ Lógica interna mantenida: `score > 0`, `score > 1`, `score > 2`
+   - ✅ Tooltips específicos del esport
+   - ✅ Interfaz dual: selector simple para competitivos, campos individuales para flexibles
+
+4. **Configuraciones por Esport**:
+   - ✅ **CS2, Valorant, FIFA, Clash Royale, Teamfight Tactics**: 2 equipos, sistema BO1/BO3/BO5
+   - ✅ **Otros esports**: Sin restricciones, interfaz estándar
+   - ✅ Validaciones automáticas según reglas del esport
+
+#### **Beneficios de la Implementación**
+
+- ✅ **UI Intuitiva**: Selector simple para esports competitivos
+- ✅ **Lógica Compleja**: Internamente mantiene toda la funcionalidad
+- ✅ **Labels Automáticos**: Se generan según la selección del usuario
+- ✅ **Consistencia Visual**: Todos los esports competitivos se ven igual
+- ✅ **Flexibilidad**: Los esports flexibles mantienen su sistema original
+- ✅ **Validaciones Automáticas**: Los nodos se validan según el esport seleccionado
 
 ### ✅ **Eliminación de Archivo SinkConfigForm.tsx - COMPLETADA**
 
@@ -89,9 +126,10 @@ El sistema ahora es extremadamente simple y eficiente:
 
 ## Próximos Pasos Sugeridos
 
-1. **Testing**: Verificar que la funcionalidad básica se mantenga intacta
-2. **Performance**: Evaluar mejoras en el rendimiento de la aplicación
-3. **Documentación**: Actualizar guía de desarrollador sobre la arquitectura ultra-simplificada
-4. **Consistencia**: Verificar que el comportamiento sea consistente en toda la aplicación
-5. **UX**: Evaluar si la simplicidad extrema mejora la experiencia del usuario
-6. **Limpieza**: Considerar si hay otros archivos o componentes innecesarios que se puedan eliminar
+1. **Testing de Esports**: Verificar que las validaciones y theming funcionen correctamente para cada esport
+2. **Performance**: Evaluar mejoras en el rendimiento de la aplicación con el nuevo sistema de esports
+3. **Documentación**: La documentación completa está en `memory-bank/edgesExample.md`
+4. **Consistencia**: Verificar que el comportamiento sea consistente entre esports competitivos y flexibles
+5. **UX**: Evaluar si la nueva interfaz de BO1/BO3/BO5 mejora la experiencia del usuario
+6. **Extensibilidad**: Considerar agregar más esports con configuraciones específicas
+7. **Validaciones Avanzadas**: Implementar validaciones más complejas según el esport (ej: reglas de empate)

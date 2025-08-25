@@ -22,7 +22,6 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 import EditableNode from "./components/EditableNode";
 import {
@@ -32,6 +31,7 @@ import {
 } from "./components/ui/tooltip";
 import type {
   EdgeCondition,
+  EsportType,
   GraphEdge,
   GraphNode,
   HistoryAction,
@@ -42,11 +42,11 @@ import type {
 } from "./types";
 import { validateDefaultEdges } from "./utils/edgeLogic";
 import {
-  getNextAvailablePodiumPosition,
-  validateTournamentStructure,
-  detectCircularDependency,
-  validateSinkDeletion,
   debugCircularDependency,
+  detectCircularDependency,
+  getNextAvailablePodiumPosition,
+  validateSinkDeletion,
+  validateTournamentStructure,
 } from "./utils/validation";
 
 const NODE_W = 400;
@@ -56,6 +56,7 @@ const MIN_DISTANCE = 150; // Distancia mínima para proximity connect
 interface TournamentEditorProps {
   graph: TournamentGraph;
   editable?: boolean;
+  esport: EsportType; // Prop obligatorio para el esport
   onGraphChange?: (graph: TournamentGraph) => void;
 }
 
@@ -63,6 +64,7 @@ interface TournamentEditorProps {
 function TournamentEditorInternal({
   graph,
   editable = true,
+  esport,
   onGraphChange,
 }: TournamentEditorProps) {
   const reactFlowInstance = useReactFlow();
@@ -568,6 +570,7 @@ function TournamentEditorInternal({
             onStartEditing={() => startEditing("node", props.id)}
             onStopEditing={stopEditing}
             allNodes={allGraphNodes}
+            esport={esport}
           />
         );
       },
@@ -581,6 +584,7 @@ function TournamentEditorInternal({
           onStartEditing={() => {}} // No-op en modo solo lectura
           onStopEditing={() => {}} // No-op en modo solo lectura
           allNodes={[]} // No necesario en modo solo lectura
+          esport={esport}
         />
       ),
     }),
@@ -607,6 +611,7 @@ function TournamentEditorInternal({
             onStopEditing={stopEditing}
             allEdges={edges}
             targetNode={targetNode}
+            esport={esport}
           />
         );
       },

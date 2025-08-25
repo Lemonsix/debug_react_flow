@@ -1,6 +1,6 @@
 import { useState } from "react";
 import TournamentEditor from "./TournamentEditor";
-import type { TournamentGraph } from "./types";
+import type { TournamentGraph, EsportType } from "./types";
 import "@xyflow/react/dist/style.css";
 
 // Función para generar un grafo inicial vacío
@@ -43,6 +43,32 @@ export default function App() {
           Design tournament flows with interactive nodes and conditional edges
         </p>
 
+        {/* Esport Selector */}
+        <div className="mt-4 mb-4">
+          <label htmlFor="esport-select" className="block text-sm font-medium text-gray-700 mb-2">
+            Seleccionar Esport:
+          </label>
+          <select
+            id="esport-select"
+            value={currentGraph.esport}
+            onChange={(e) => {
+              const newEsport = e.target.value as EsportType;
+              setCurrentGraph(prev => ({
+                ...prev,
+                esport: newEsport
+              }));
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="cs2">CS2</option>
+            <option value="valorant">Valorant</option>
+            <option value="fifa">FIFA</option>
+            <option value="clash-royale">Clash Royale</option>
+            <option value="teamfight-tactics">Teamfight Tactics</option>
+            <option value="default">Otros</option>
+          </select>
+        </div>
+
         {/* Toggle between editor and viewer */}
         <div className="mt-4 flex gap-2">
           <button
@@ -64,7 +90,7 @@ export default function App() {
               px-4 py-2 text-sm font-medium rounded-lg transition-colors
               ${
                 !useEditor
-                  ? "bg-blue-600 text-white"
+                  ? "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
                   : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               }
             `}
@@ -79,6 +105,7 @@ export default function App() {
         graph={currentGraph}
         onGraphChange={useEditor ? handleGraphChange : undefined}
         editable={useEditor}
+        esport={currentGraph.esport}
       />
     </div>
   );

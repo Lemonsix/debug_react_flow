@@ -1,12 +1,13 @@
 import { Handle, Position } from "@xyflow/react";
 import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import type { GraphNode, MatchConfiguration } from "../types";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import type { GraphNode, MatchConfiguration, EsportType } from "../types";
 import {
   validateNodeForm,
   validateTournamentStructure,
 } from "../utils/validation";
 import { MatchConfigEditor } from "./FormComponents";
+import { validateMatchForEsport } from "../config/esports";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -16,6 +17,7 @@ interface EditableNodeProps {
   onStartEditing?: () => void;
   onStopEditing?: () => void;
   allNodes?: GraphNode[];
+  esport: EsportType; // Prop para validación del esport
 }
 
 export default function EditableNode({
@@ -26,6 +28,7 @@ export default function EditableNode({
   onStartEditing,
   onStopEditing,
   allNodes = [],
+  esport,
 }: EditableNodeProps) {
   // Usar el estado global de edición en lugar del local
   // Los nodos sink nunca pueden ser editados
@@ -58,6 +61,8 @@ export default function EditableNode({
     });
   }, [data.type, data.capacity, data.matchConfig]);
 
+
+
   // Validación del formulario (solo para nodos match)
   const validation =
     formData.type === "match"
@@ -70,6 +75,31 @@ export default function EditableNode({
           allNodes
         )
       : { isValid: true, errors: {} };
+
+  // Validación adicional del esport para nodos match
+  const esportValidation = useMemo(() => {
+    if (formData.type === "match") {
+      return validateMatchForEsport(esport, formData.capacity, formData.capacity);
+    }
+    return { isValid: true, errors: [] };
+  }, [esport, formData.type, formData.capacity]);
+
+  // Combinar validaciones
+  const combinedValidation = useMemo(() => {
+    if (formData.type === "match") {
+      const isFormValid = validation.isValid;
+      const isEsportValid = esportValidation.isValid;
+      
+      return {
+        isValid: isFormValid && isEsportValid,
+        errors: {
+          ...validation.errors,
+          esport: esportValidation.errors
+        }
+      };
+    }
+    return validation;
+  }, [validation, esportValidation, formData.type]);
 
   // Actualizar datos del nodo (solo para nodos match)
   const handleUpdate = useCallback(
@@ -93,6 +123,18 @@ export default function EditableNode({
         }
       }
 
+      // Validar cambios de capacidad según el esport
+      if (field === "capacity" && formData.type === "match") {
+        const newCapacity = value as number;
+        const esportValidation = validateMatchForEsport(esport, newCapacity, newCapacity);
+        if (!esportValidation.isValid) {
+          alert(`Error de validación del esport: ${esportValidation.errors.join(", ")}`);
+          // Revertir el cambio
+          setFormData((prev) => ({ ...prev }));
+          return;
+        }
+      }
+
       if (onChange) {
         // Incluir matchConfig en las actualizaciones si es un nodo de match
         if (field === "matchConfig") {
@@ -102,12 +144,12 @@ export default function EditableNode({
         }
       }
     },
-    [onChange, formData, data, allNodes]
+    [onChange, formData, data, allNodes, esport]
   );
 
   // Guardar cambios y salir del modo edición
   const handleSave = useCallback(() => {
-    if (!validation.isValid) return;
+    if (!combinedValidation.isValid) return;
 
     if (onChange) {
       onChange({
@@ -117,7 +159,7 @@ export default function EditableNode({
     }
     // Desactivar la edición automáticamente
     onStopEditing?.();
-  }, [formData, validation.isValid, onChange, onStopEditing]);
+  }, [formData, combinedValidation.isValid, onChange, onStopEditing]);
 
   // Cancelar edición y revertir cambios
   const handleCancel = useCallback(() => {
@@ -309,6 +351,7 @@ export default function EditableNode({
               <MatchConfigEditor
                 config={formData.matchConfig}
                 onChange={(config) => handleUpdate("matchConfig", config)}
+                esport={esport}
               />
             ) : null}
 

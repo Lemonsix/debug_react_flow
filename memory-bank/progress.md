@@ -1,8 +1,8 @@
 # Tournament Graph Editor - Progress
 
-## ✅ PROYECTO COMPLETADO
+## ✅ PROYECTO COMPLETADO + FUNCIONALIDAD DE ESPORTS
 
-### Funcionalidades Implementadas al 100%
+### Funcionalidades Implementadas al 100% + Sistema de Esports
 
 #### 🎯 Funcionalidades Core Solicitadas
 - ✅ **Nodos Editables**: Formularios interactivos para configurar tipo, slots y propiedades
@@ -10,6 +10,9 @@
 - ✅ **Creación de Nodos**: Botones para agregar Match, Aggregator y Sink nodes
 - ✅ **Conexión de Nodos**: Drag & drop entre handles para crear edges
 - ✅ **Exportación JSON**: Botón de guardado que genera configuración completa
+- ✅ **Sistema de Esports**: Configuraciones específicas por deporte electrónico
+- ✅ **Validaciones por Esport**: Restricciones automáticas según el tipo de esport
+- ✅ **Theming de Edges**: Sistema BO1/BO3/BO5 para esports competitivos
 
 #### 🛠️ Arquitectura y Código
 - ✅ **Tipos Extendidos**: Interfaces TypeScript para todas las nuevas funcionalidades
@@ -17,6 +20,9 @@
 - ✅ **Validación**: Sistema completo de validación en tiempo real
 - ✅ **Estado Management**: Sincronización entre React Flow y estado de aplicación
 - ✅ **Performance**: Optimizaciones con memoización y lazy loading
+- ✅ **Configuración de Esports**: Sistema centralizado en `src/config/esports.ts`
+- ✅ **Validaciones Específicas**: Reglas por esport con mensajes personalizados
+- ✅ **Interfaz Dual**: Selector simple para competitivos, campos individuales para flexibles
 
 #### 🎨 Experiencia de Usuario
 - ✅ **UI Moderna**: Diseño limpio con Tailwind CSS
@@ -24,20 +30,25 @@
 - ✅ **Modo Toggle**: Intercambio fluido entre Editor y Viewer
 - ✅ **Validación UX**: Mensajes de error claros y feedback inmediato
 - ✅ **Iconografía**: Emojis y iconos intuitivos para acciones
+- ✅ **Selector de Esport**: Dropdown para elegir el deporte electrónico
+- ✅ **Interfaz Adaptativa**: Se adapta automáticamente según el esport seleccionado
+- ✅ **Mensajes Contextuales**: Información específica para cada tipo de esport
 
 ### Estructura de Archivos Final
 
 ```
 src/
-├── types.ts                    # ✅ Tipos extendidos para edición
-├── App.tsx                     # ✅ Aplicación principal con toggle
-├── TournamentEditor.tsx        # ✅ Editor interactivo principal
+├── types.ts                    # ✅ Tipos extendidos para edición + esports
+├── App.tsx                     # ✅ Aplicación principal con toggle + selector de esport
+├── TournamentEditor.tsx        # ✅ Editor interactivo principal + prop esport
 ├── TournamentGraphView.tsx     # ✅ Visualizador original (mantenido)
 ├── data.sample.ts             # ✅ Datos de muestra (existente)
+├── config/
+│   └── esports.ts             # ✅ Configuraciones y validaciones por esport
 ├── components/
-│   ├── FormComponents.tsx      # ✅ Componentes de formulario base
-│   ├── EditableNode.tsx        # ✅ Nodos editables
-│   └── EditableEdge.tsx        # ✅ Edges con condiciones
+│   ├── FormComponents.tsx      # ✅ Componentes de formulario base + validación esport
+│   ├── EditableNode.tsx        # ✅ Nodos editables + validación esport
+│   └── EditableEdge.tsx        # ✅ Edges con condiciones + sistema BO1/BO3/BO5
 ├── utils/
 │   └── validation.ts           # ✅ Funciones de validación
 └── memory-bank/               # ✅ Documentación completa
@@ -46,7 +57,8 @@ src/
     ├── systemPatterns.md
     ├── techContext.md
     ├── activeContext.md
-    └── progress.md
+    ├── progress.md
+    └── edgesExample.md         # ✅ Documentación del sistema de edges
 ```
 
 ### Funcionalidades Detalladas
@@ -96,6 +108,26 @@ src/
 - Drag & drop natural entre handles
 - Validación automática de conexiones
 - Condiciones por defecto aplicadas
+
+#### 🎮 Sistema de Esports
+**Esports Competitivos (2 equipos por match):**
+- **CS2**: Counter-Strike 2
+- **Valorant**: Riot Games
+- **FIFA**: EA Sports
+- **Clash Royale**: Supercell
+- **Teamfight Tactics**: Riot Games
+
+**Características:**
+- Campo de capacidad oculto (siempre 2 equipos)
+- Sistema de edges BO1/BO3/BO5
+- Selector simple: "Derrota", "Ganador BO1", "BO3", "BO5"
+- Labels automáticos: "Derrota", "BO1", "BO3", "BO5"
+- Validaciones automáticas según reglas del esport
+
+**Esports Flexibles:**
+- Sin restricciones de equipos
+- Interfaz estándar con campos individuales
+- Validaciones genéricas
 
 #### 💾 Exportación y Persistencia
 **Funcionalidades:**

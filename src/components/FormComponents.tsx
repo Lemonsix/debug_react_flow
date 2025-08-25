@@ -6,6 +6,7 @@ import type {
   EdgeCondition,
   MatchConfiguration,
   MatchModalidad,
+  EsportType,
 } from "../types";
 import { DateTimePicker } from "./DateTimePicker";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ interface FormFieldProps {
   previousValue?: string | number; // Para rollback
   defaultValue?: string | number; // Valor por defecto si no hay valor anterior
   tooltip?: string; // Tooltip opcional para el label
+  disabled?: boolean; // Para deshabilitar el campo
 }
 
 export function FormField({
@@ -56,6 +58,7 @@ export function FormField({
   previousValue,
   defaultValue,
   tooltip,
+  disabled = false,
 }: FormFieldProps) {
   const [localError, setLocalError] = useState<string | undefined>(error);
   const [localValue, setLocalValue] = useState<string>(value?.toString() || "");
@@ -109,8 +112,12 @@ export function FormField({
       )}
 
       {type === "select" && options ? (
-        <Select value={value.toString()} onValueChange={(val) => onChange(val)}>
-          <SelectTrigger className="w-full">
+        <Select 
+          value={value.toString()} 
+          onValueChange={(val) => onChange(val)}
+          disabled={disabled}
+        >
+          <SelectTrigger className={`w-full ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
             <SelectValue placeholder={`Seleccionar ${label.toLowerCase()}`} />
           </SelectTrigger>
           <SelectContent>
@@ -126,14 +133,16 @@ export function FormField({
           type="text"
           value={localValue}
           onChange={(e) => {
+            if (disabled) return; // No permitir cambios si está deshabilitado
             setLocalError(undefined); // Limpiar error mientras se escribe
             setLocalValue(e.target.value);
           }}
-          onBlur={handleBlur}
+          onBlur={disabled ? undefined : handleBlur}
           placeholder={placeholder}
+          disabled={disabled}
           className={`w-full ${
             localError || error ? "border-destructive" : ""
-          }`}
+          } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         />
       )}
 
@@ -292,11 +301,13 @@ export function EditToggle({
 interface MatchConfigEditorProps {
   config: MatchConfiguration;
   onChange: (config: MatchConfiguration) => void;
+  esport: EsportType; // Prop para validación del esport
 }
 
 export function MatchConfigEditor({
   config,
   onChange,
+  esport,
 }: MatchConfigEditorProps) {
   const modalityOptions = React.useMemo(
     () => [
@@ -328,39 +339,41 @@ export function MatchConfigEditor({
           tooltip="Título descriptivo del match (ej: Final, Semifinal, Cuartos de Final)"
         />
 
-        <FormField
-          label="Equipos Participantes"
-          value={config.capacity || ""}
-          previousValue={config.capacity}
-          defaultValue={2}
-          onChange={(val) => {
-            updateConfig("capacity", val);
-          }}
-          validate={(val) => {
-            if (val === "" || val === undefined) {
-              return "La cantidad de participantes es requerida";
-            }
-            const strVal = val.toString();
-
-            // Verificar si contiene caracteres no numéricos o números negativos
-            if (!/^\d+$/.test(strVal)) {
-              if (/^-/.test(strVal)) {
-                return "Solo se admiten números positivos";
-              } else if (/[^\d-.]/.test(strVal)) {
-                return "Solo se admiten números enteros";
-              } else if (/\./.test(strVal)) {
-                return "Solo se admiten números enteros (sin decimales)";
-              } else {
-                return "Solo se admiten números enteros positivos";
+        {/* Solo mostrar el campo de equipos participantes para esports flexibles */}
+        {esport === "default" && (
+          <FormField
+            label="Equipos Participantes"
+            value={config.capacity || ""}
+            previousValue={config.capacity}
+            defaultValue={2}
+            onChange={(val) => {
+              updateConfig("capacity", val);
+            }}
+            validate={(val) => {
+              if (val === "" || val === undefined) {
+                return "La cantidad de participantes es requerida";
               }
-            }
+              const strVal = val.toString();
 
-            const numVal = Number(strVal);
-            if (numVal < 1) {
-              return "Debe haber al menos 1 participante";
-            }
-            if (numVal > 1000) {
-              return "No puede haber más de 1000 participantes";
+              // Verificar si contiene caracteres no numéricos o números negativos
+              if (!/^\d+$/.test(strVal)) {
+                if (/^-/.test(strVal)) {
+                  return "Solo se admiten números positivos";
+                } else if (/[^\d-]/.test(strVal)) {
+                  return "Solo se admiten números enteros";
+                } else if (/\./.test(strVal)) {
+                  return "Solo se admiten números enteros (sin decimales)";
+                } else {
+                  return "Solo se admiten números enteros positivos";
+                }
+              }
+
+              const numVal = Number(strVal);
+              if (numVal < 1) {
+                return "Debe haber al menos 1 participante";
+              }
+              if (numVal > 1000) {
+                return "No puede haber más de 1000 participantes";
             }
             return undefined;
           }}
@@ -369,7 +382,9 @@ export function MatchConfigEditor({
           tooltip="Cantidad de equipos a participar en el match"
           required
         />
-
+        )}
+        
+      
         <FormField
           label="Modalidad"
           value={config.modalidad}
