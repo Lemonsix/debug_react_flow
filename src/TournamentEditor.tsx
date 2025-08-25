@@ -49,6 +49,7 @@ import {
   getNextAvailablePodiumPosition,
   validateSinkDeletion,
   validateTournamentStructure,
+  validatePodiumEdges,
 } from "./utils/validation";
 
 const NODE_W = 400;
@@ -942,7 +943,34 @@ function TournamentEditorInternal({
 
       // Usar la utilidad addEdge de React Flow para mejor rendimiento
       setEdges((eds) => {
-        const newEdges = addEdge(newEdge, eds);
+        let newEdges = addEdge(newEdge, eds);
+        
+        // Validación especial para podios: solo permitir 1 edge de entrada
+        const targetNode = nodes.find((n) => n.id === params.target);
+        if (targetNode?.data.type === "sink" && 
+            (targetNode.data as GraphNode).sinkConfig?.sinkType === "podium") {
+          
+          // Usar la función de utilidad para validar podios
+          const graphNodes = nodes.map((n) => n.data as GraphNode);
+          const graphEdges = newEdges.map((e) => e.data as GraphEdge);
+          const podiumValidation = validatePodiumEdges(graphNodes, graphEdges);
+          
+          if (!podiumValidation.valid && podiumValidation.edgesToRemove.length > 0) {
+            // Eliminar los edges anteriores
+            newEdges = newEdges.filter((e) => !podiumValidation.edgesToRemove.includes(e.data as GraphEdge));
+            
+            // Agregar al historial la eliminación de edges
+            podiumValidation.edgesToRemove.forEach((edge) => {
+              addToHistory("DELETE_EDGE", {
+                edgeId: edge.id,
+                beforeState: edge,
+              });
+            });
+            
+            console.log(`🏆 Podio ${params.target}: Edge anterior eliminado, manteniendo solo el más reciente`);
+          }
+        }
+        
         // Validar que la lógica de default sea correcta
         validateDefaultEdges(newEdges);
         return newEdges;

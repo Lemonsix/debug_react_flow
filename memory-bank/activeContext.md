@@ -46,6 +46,12 @@
    - ✅ **Labels Contextuales**: "Derrota", "Ganador" o "Victoria" según el contexto
    - ✅ **Detección Automática**: El sistema detecta automáticamente si será edge default o no
 
+7. **Validación de Podios**:
+   - ✅ **Un Solo Edge**: Los podios solo pueden tener 1 edge de entrada
+   - ✅ **Reemplazo Automático**: Si se conecta un nuevo edge, el anterior se elimina automáticamente
+   - ✅ **Historial Completo**: Todas las eliminaciones se registran en el historial
+   - ✅ **Lógica de Torneo**: Mantiene la integridad del flujo del torneo
+
 #### **Beneficios de la Implementación**
 
 - ✅ **UI Intuitiva**: Selector simple para esports competitivos

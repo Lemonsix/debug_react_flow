@@ -4,6 +4,7 @@ import type {
   SinkConfiguration,
   MatchConfiguration,
   GraphNode,
+  GraphEdge,
 } from "../types";
 import type { Edge, Node } from "@xyflow/react";
 
@@ -664,4 +665,40 @@ export function validateSinkDeletion(
   }
 
   return { isValid: true };
+}
+
+/**
+ * Valida que los podios tengan exactamente 1 edge de entrada
+ * Si hay múltiples edges, retorna los que deben ser eliminados
+ */
+export function validatePodiumEdges(
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): { valid: boolean; edgesToRemove: GraphEdge[] } {
+  const podiums = nodes.filter(
+    (node) => node.type === "sink" && node.sinkConfig?.sinkType === "podium"
+  );
+
+  const edgesToRemove: GraphEdge[] = [];
+
+  podiums.forEach((podium) => {
+    const edgesToPodium = edges.filter((edge) => edge.toNode === podium.id);
+    
+    if (edgesToPodium.length > 1) {
+      // Ordenar por timestamp para encontrar el más reciente
+      const sortedEdges = edgesToPodium.sort((a, b) => {
+        const timestampA = parseInt(a.id.split('-')[1] || '0');
+        const timestampB = parseInt(b.id.split('-')[1] || '0');
+        return timestampB - timestampA; // Orden descendente
+      });
+      
+      // Mantener solo el edge más reciente, eliminar los anteriores
+      edgesToRemove.push(...sortedEdges.slice(1));
+    }
+  });
+
+  return {
+    valid: edgesToRemove.length === 0,
+    edgesToRemove,
+  };
 }

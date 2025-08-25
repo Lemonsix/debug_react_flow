@@ -106,6 +106,12 @@ Cuando se crea un nuevo edge:
 - 📝 **Labels Informativos**: Se muestra "Derrota", "Ganador" o "Victoria" según el contexto
 - 🔄 **Detección Automática**: El sistema detecta automáticamente si será edge default o no
 
+### Validación de Podios
+- 🏆 **Un Solo Edge**: Los podios solo pueden tener 1 edge de entrada
+- 🔄 **Reemplazo Automático**: Si se conecta un nuevo edge, el anterior se elimina automáticamente
+- 📊 **Historial Completo**: Todas las eliminaciones se registran en el historial
+- 🎯 **Lógica de Torneo**: Mantiene la integridad del flujo del torneo
+
 ## Implementación Técnica
 
 ### Sistema de "Ghost" Personalizado
@@ -160,6 +166,70 @@ const getConnectionLabel = () => {
   if (esport !== "fortnite") return "Ganador";
   return "Victoria";
 };
+```
+
+### Validación de Podios
+
+#### **Función de Validación**
+```typescript
+export function validatePodiumEdges(
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): { valid: boolean; edgesToRemove: GraphEdge[] } {
+  const podiums = nodes.filter(
+    (node) => node.type === "sink" && node.sinkConfig?.sinkType === "podium"
+  );
+
+  const edgesToRemove: GraphEdge[] = [];
+
+  podiums.forEach((podium) => {
+    const edgesToPodium = edges.filter((edge) => edge.toNode === podium.id);
+    
+    if (edgesToPodium.length > 1) {
+      // Ordenar por timestamp para encontrar el más reciente
+      const sortedEdges = edgesToPodium.sort((a, b) => {
+        const timestampA = parseInt(a.id.split('-')[1] || '0');
+        const timestampB = parseInt(b.id.split('-')[1] || '0');
+        return timestampB - timestampA; // Orden descendente
+      });
+      
+      // Mantener solo el edge más reciente, eliminar los anteriores
+      edgesToRemove.push(...sortedEdges.slice(1));
+    }
+  });
+
+  return {
+    valid: edgesToRemove.length === 0,
+    edgesToRemove,
+  };
+}
+```
+
+#### **Integración en onConnect**
+```typescript
+// Validación especial para podios: solo permitir 1 edge de entrada
+const targetNode = nodes.find((n) => n.id === params.target);
+if (targetNode?.data.type === "sink" && 
+    (targetNode.data as GraphNode).sinkConfig?.sinkType === "podium") {
+  
+  // Usar la función de utilidad para validar podios
+  const graphNodes = nodes.map((n) => n.data as GraphNode);
+  const graphEdges = newEdges.map((e) => e.data as GraphEdge);
+  const podiumValidation = validatePodiumEdges(graphNodes, graphEdges);
+  
+  if (!podiumValidation.valid && podiumValidation.edgesToRemove.length > 0) {
+    // Eliminar los edges anteriores
+    newEdges = newEdges.filter((e) => !podiumValidation.edgesToRemove.includes(e.data as GraphEdge));
+    
+    // Agregar al historial la eliminación de edges
+    podiumValidation.edgesToRemove.forEach((edge) => {
+      addToHistory("DELETE_EDGE", {
+        edgeId: edge.id,
+        beforeState: edge,
+      });
+    });
+  }
+}
 ```
 
 ### Lógica de Labels
