@@ -48,25 +48,25 @@ export default function App() {
           <label htmlFor="esport-select" className="block text-sm font-medium text-gray-700 mb-2">
             Seleccionar Esport:
           </label>
-          <select
-            id="esport-select"
-            value={currentGraph.esport}
-            onChange={(e) => {
-              const newEsport = e.target.value as EsportType;
-              setCurrentGraph(prev => ({
-                ...prev,
-                esport: newEsport
-              }));
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="cs2">CS2</option>
-            <option value="valorant">Valorant</option>
-            <option value="fifa">FIFA</option>
-            <option value="clash-royale">Clash Royale</option>
-            <option value="teamfight-tactics">Teamfight Tactics</option>
-            <option value="default">Otros</option>
-          </select>
+                      <select
+              id="esport-select"
+              value={currentGraph.esport}
+              onChange={(e) => {
+                const newEsport = e.target.value as EsportType;
+                setCurrentGraph(prev => ({
+                  ...prev,
+                  esport: newEsport
+                }));
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="cs2">CS2</option>
+              <option value="valorant">Valorant</option>
+              <option value="fifa">FIFA</option>
+              <option value="clash-royale">Clash Royale</option>
+              <option value="teamfight-tactics">Teamfight Tactics</option>
+              <option value="fortnite">Fortnite</option>
+            </select>
         </div>
 
         {/* Toggle between editor and viewer */}

@@ -22,7 +22,7 @@
 - ✅ **Performance**: Optimizaciones con memoización y lazy loading
 - ✅ **Configuración de Esports**: Sistema centralizado en `src/config/esports.ts`
 - ✅ **Validaciones Específicas**: Reglas por esport con mensajes personalizados
-- ✅ **Interfaz Dual**: Selector simple para competitivos, campos individuales para flexibles
+- ✅ **Interfaz Dual**: Selector simple para competitivos, campos individuales para Fortnite
 
 #### 🎨 Experiencia de Usuario
 - ✅ **UI Moderna**: Diseño limpio con Tailwind CSS
@@ -124,10 +124,11 @@ src/
 - Labels automáticos: "Derrota", "BO1", "BO3", "BO5"
 - Validaciones automáticas según reglas del esport
 
-**Esports Flexibles:**
-- Sin restricciones de equipos
+**Fortnite:**
+- N participantes configurables (hasta 100)
 - Interfaz estándar con campos individuales
-- Validaciones genéricas
+- Condiciones por score y posición
+- Validaciones específicas del esport
 
 #### 💾 Exportación y Persistencia
 **Funcionalidades:**

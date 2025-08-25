@@ -7,7 +7,7 @@ export type EsportType =
   | "fifa" 
   | "clash-royale" 
   | "teamfight-tactics" 
-  | "default";
+  | "fortnite";
 
 export type EsportConfiguration = {
   maxTeamsPerMatch: number;
@@ -47,7 +47,7 @@ export type ConditionOperator = ">=" | "<=" | "==" | "!=" | ">" | "<";
 export type EdgeCondition = {
   operator: ConditionOperator;
   value: number;
-  field: "points" | "position" | "score" | "default";
+  field: "position" | "score" | "default";
 };
 
 export type SinkType = "disqualification" | "qualification" | "podium";

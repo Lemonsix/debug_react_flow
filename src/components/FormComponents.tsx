@@ -340,7 +340,7 @@ export function MatchConfigEditor({
         />
 
         {/* Solo mostrar el campo de equipos participantes para esports flexibles */}
-        {esport === "default" && (
+        {esport === "fortnite" && (
           <FormField
             label="Equipos Participantes"
             value={config.capacity || ""}

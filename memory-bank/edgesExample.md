@@ -43,30 +43,59 @@ Cuando edites un edge en un esport competitivo, verás un selector simple con op
 - **Tooltip**: "Los equipos que ganen al menos 3 rondas (BO5) seguirán este flujo"
 - **Uso**: Para victorias en Best of 5
 
-## Esports Flexibles (Otros)
+## Fortnite (N Participantes)
 
 ### Interfaz de Usuario
-Para esports flexibles, mantienes la interfaz original con campos individuales:
+Para Fortnite, tienes un selector personalizado con campos configurables:
 
 ```
-┌─────────────────────────────────────────┐
-│ [Default ▼] [≥] [0]                    │
-│  • Default                             │
-│  • Points                              │
-│  • Position                            │
-│  • Score                               │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│ [Derrota ▼]                         │
+│  • Derrota                          │
+│  • Victoria por Posición            │
+│  • Victoria por Score               │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ [≤] [10]                            │
+│ Operador: ≥, ≤, ==, !=, >, <        │
+│ Valor: Número positivo               │
+└─────────────────────────────────────┘
 ```
 
 ### Edge Default
 - **Condición**: `field: "default"`
-- **Label mostrado**: "default"
-- **Tooltip**: "Los participantes que no cumplan con las otras condiciones del match irán por este flujo. Recomendado para derrotas"
+- **Label mostrado**: "Derrota"
+- **Tooltip**: "Los equipos que pierdan el match seguirán este flujo hacia la derrota"
 
-### Edge de Puntos
-- **Condición**: `field: "points", operator: ">=", value: 10`
-- **Label mostrado**: "points >= 10"
-- **Tooltip**: "Los participantes con puntos mayor o igual a 10 seguirán este camino"
+### Edge de Score
+- **Condición**: `field: "score", operator: ">=", value: 50`
+- **Label mostrado**: "Score 50 o más"
+- **Tooltip**: "Los participantes con score mayor o igual a 50 tomarán este flujo"
+
+### Edge de Posición
+- **Condición**: `field: "position", operator: "<=", value: 10`
+- **Label mostrado**: "Top 10"
+- **Tooltip**: "Los participantes en posición menor o igual a 10 continuarán por esta ruta"
+
+### Edge de Score
+- **Condición**: `field: "score", operator: ">=", value: 50`
+- **Label mostrado**: "Score 50 o más"
+- **Tooltip**: "Los participantes con score mayor o igual a 50 tomarán este flujo"
+
+## Comportamiento de Edges Nuevos
+
+### Creación Automática
+Cuando se crea un nuevo edge:
+- **Edge Default**: Se crea automáticamente con condición `field: "default"`
+- **Edge Ganador**: Se crea con condición `field: "score", operator: ">=", value: 0`
+- **Edición Automática**: Los edges nuevos se abren automáticamente para edición
+- **Labels Descriptivos**: Los edges de score se muestran con labels descriptivos según el esport
+
+### Eliminación de "Points"
+- ❌ **Antes**: Los edges se creaban con `field: "points"` (obsoleto)
+- ✅ **Ahora**: Los edges se crean con `field: "score"` (estándar)
+- 🔄 **Migración**: Todos los edges existentes se actualizan automáticamente
 
 ## Implementación Técnica
 
@@ -179,7 +208,27 @@ if (value === "default") {
 - **Edge Ganador**: Seleccionar "Ganador BO5" → se muestra "BO5" (score > 2)
 - **Edge Perdedor**: Seleccionar "Derrota" → se muestra "Derrota"
 
-### Torneo de Otros Esports
-- **Match Grupal**: N equipos compiten
-- **Edge Ganador**: Configurar manualmente `points >= 10`
-- **Edge Perdedor**: Seleccionar "Default" → se muestra "default"
+### Torneo de Fortnite
+- **Match Battle Royale**: N equipos compiten (configurable)
+- **Edge Ganador**: 
+  - **Victoria por Posición**: Configurable (position <= N, position >= N, etc.)
+  - **Victoria por Score**: Configurable (score >= N, score <= N, etc.)
+- **Edge Perdedor**: Seleccionar "Derrota" → se muestra "Derrota"
+
+#### **Labels Descriptivos para Fortnite**
+
+**Por Posición:**
+- `position <= 10` → **"Top 10"**
+- `position < 10` → **"Top 9"**
+- `position >= 5` → **"Posición 5 o mejor"**
+- `position > 5` → **"Posición 6 o mejor"**
+- `position == 1` → **"Posición 1"**
+- `position != 1` → **"No posición 1"**
+
+**Por Score:**
+- `score >= 50` → **"Score 50 o más"**
+- `score > 50` → **"Score 51 o más"**
+- `score <= 100` → **"Score 100 o menos"**
+- `score < 100` → **"Score 99 o menos"**
+- `score == 75` → **"Score exacto 75"**
+- `score != 75` → **"Score diferente de 75"**

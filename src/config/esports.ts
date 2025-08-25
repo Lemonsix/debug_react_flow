@@ -76,28 +76,32 @@ export const ESPORT_CONFIGS: Record<EsportType, EsportConfiguration> = {
       maxMatchesPerTeam: 1
     }
   },
-  default: {
-    maxTeamsPerMatch: 4, // Más flexible para otros esports
+  fortnite: {
+    maxTeamsPerMatch: 100, // N participantes configurables
     edgeLabels: {
       winner: "Ganador",
       loser: "Perdedor"
     },
     validationRules: {
       allowMultipleTeams: true,
-      requireEvenTeams: false
+      requireEvenTeams: false,
+      maxMatchesPerTeam: 1
     }
   }
 };
 
 export function getEsportConfig(esport: EsportType): EsportConfiguration {
-  return ESPORT_CONFIGS[esport] || ESPORT_CONFIGS.default;
+  return ESPORT_CONFIGS[esport];
 }
 
 export function validateMatchForEsport(
   esport: EsportType, 
   capacity: number, 
   teamCount: number
-): { isValid: boolean; errors: string[] } {
+): {
+  isValid: boolean;
+  errors: string[];
+} {
   const config = getEsportConfig(esport);
   const errors: string[] = [];
 

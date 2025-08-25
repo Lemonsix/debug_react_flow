@@ -28,12 +28,17 @@
    - ✅ Labels automáticos: "Derrota", "BO1", "BO3", "BO5"
    - ✅ Lógica interna mantenida: `score > 0`, `score > 1`, `score > 2`
    - ✅ Tooltips específicos del esport
-   - ✅ Interfaz dual: selector simple para competitivos, campos individuales para flexibles
+   - ✅ Interfaz dual: selector simple para competitivos, campos individuales para Fortnite
 
 4. **Configuraciones por Esport**:
    - ✅ **CS2, Valorant, FIFA, Clash Royale, Teamfight Tactics**: 2 equipos, sistema BO1/BO3/BO5
-   - ✅ **Otros esports**: Sin restricciones, interfaz estándar
+   - ✅ **Fortnite**: N participantes configurables, condiciones por score y posición
    - ✅ Validaciones automáticas según reglas del esport
+
+5. **Mejoras en Creación de Edges**:
+   - ✅ **Eliminación de "Points"**: Los edges nuevos se crean con `field: "score"` en lugar de `field: "points"`
+   - ✅ **Edición Automática**: Los edges nuevos se abren automáticamente para edición
+   - ✅ **Labels Descriptivos**: Fortnite muestra labels en lenguaje natural (ej: "Top 10", "Score 50 o más")
 
 #### **Beneficios de la Implementación**
 

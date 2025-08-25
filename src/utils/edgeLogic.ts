@@ -187,7 +187,7 @@ export function validateDefaultEdges(edges: Edge[]): void {
           edgeData.isDefault = false;
           // Cambiar su condición a algo que no sea default
           edgeData.condition = {
-            field: "points" as const,
+            field: "score" as const,
             operator: ">=" as const,
             value: 0,
           };

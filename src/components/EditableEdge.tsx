@@ -71,7 +71,7 @@ export default function EditableEdge({
   const { isDefault, color } = switchLogic;
   const [condition, setCondition] = useState<EdgeCondition>(
     edgeData?.condition || {
-      field: isDefault ? "default" : "points",
+      field: isDefault ? "default" : "score",
       operator: ">=",
       value: 0,
     }
@@ -96,11 +96,22 @@ export default function EditableEdge({
 
   // Validación de la condición - "default" siempre es válido
   const validation = useMemo(
-    () =>
-      condition.field === "default"
-        ? { isValid: true, errors: {} }
-        : validateEdgeCondition(condition),
-    [condition]
+    () => {
+      if (condition.field === "default") {
+        return { isValid: true, errors: {} };
+      }
+      
+      // Para Fortnite, validar que el valor sea positivo
+      if (esport === "fortnite" && condition.value < 0) {
+        return { 
+          isValid: false, 
+          errors: { value: "El valor debe ser un número positivo" } 
+        };
+      }
+      
+      return validateEdgeCondition(condition);
+    },
+    [condition, esport]
   );
 
   // Manejar guardado de condición
@@ -123,13 +134,13 @@ export default function EditableEdge({
 
   // Cancelar edición
   const handleCancel = useCallback(() => {
-    setCondition(
-      edgeData?.condition || {
-        field: isDefault ? "default" : "points",
-        operator: ">=",
-        value: 0,
-      }
-    );
+            setCondition(
+          edgeData?.condition || {
+            field: isDefault ? "default" : "score",
+            operator: ">=",
+            value: 0,
+          }
+        );
     onStopEditing?.();
   }, [edgeData?.condition, onStopEditing, isDefault]);
 
@@ -140,36 +151,77 @@ export default function EditableEdge({
     // Usar el estado local actual en lugar de edgeData?.condition para evitar retrasos
     const currentCondition = edgeData?.condition || condition;
 
-    // Si el campo es "default", mostrar "Derrota" para esports competitivos
+    // Si el campo es "default", mostrar "Derrota" para esports competitivos y Fortnite
     if (currentCondition?.field === "default" || isDefault) {
-      if (esport !== "default") {
+      if (esport !== "fortnite") {
         return "Derrota";
       }
-      return "default";
+      return "Derrota";
     }
 
-    // Para otros campos, mostrar la condición con theming del esport
-    if (currentCondition && (currentCondition.field as string) !== "default") {
-      const esportConfig = getEsportConfig(esport);
-      
-      // Si es un esport competitivo (cs2, valorant, etc.), usar labels específicos
-      if (esport !== "default") {
-        // Para edges de ganador basados en score, usar BO1, BO3, BO5
-        if (currentCondition.field === "score" && currentCondition.operator === ">") {
-          if (currentCondition.value === 0) {
-            return "BO1"; // score > 0
-          } else if (currentCondition.value === 1) {
-            return "BO3"; // score > 1
-          } else if (currentCondition.value === 2) {
-            return "BO5"; // score > 2
+          // Para otros campos, mostrar la condición con theming del esport
+      if (currentCondition && (currentCondition.field as string) !== "default") {
+        const esportConfig = getEsportConfig(esport);
+        
+        // Si es un esport competitivo (cs2, valorant, etc.), usar labels específicos
+        if (esport !== "fortnite") {
+          // Para edges de ganador basados en score, usar BO1, BO3, BO5
+          if (currentCondition.field === "score" && currentCondition.operator === ">") {
+            if (currentCondition.value === 0) {
+              return "BO1"; // score > 0
+            } else if (currentCondition.value === 1) {
+              return "BO3"; // score > 1
+            } else if (currentCondition.value === 2) {
+              return "BO5"; // score > 2
+            }
+          }
+          // Para otros casos, usar el label genérico del esport
+          return esportConfig.edgeLabels.winner;
+        }
+        
+        // Para Fortnite, generar labels descriptivos en lenguaje natural
+        if (esport === "fortnite") {
+          const { field, operator, value } = currentCondition;
+          
+          if (field === "position") {
+            switch (operator) {
+              case "<=":
+                return `Top ${value}`;
+              case "<":
+                return `Top ${value - 1}`;
+              case ">=":
+                return `Posición ${value} o mejor`;
+              case ">":
+                return `Posición ${value + 1} o mejor`;
+              case "==":
+                return `Posición ${value}`;
+              case "!=":
+                return `No posición ${value}`;
+              default:
+                return `Posición ${operator} ${value}`;
+            }
+          } else if (field === "score") {
+            switch (operator) {
+              case ">=":
+                return `Score ${value} o más`;
+              case ">":
+                return `Score ${value + 1} o más`;
+              case "<=":
+                return `Score ${value} o menos`;
+              case "<":
+                return `Score ${value - 1} o menos`;
+              case "==":
+                return `Score exacto ${value}`;
+              case "!=":
+                return `Score diferente de ${value}`;
+              default:
+                return `Score ${operator} ${value}`;
+            }
           }
         }
-        // Para otros casos, usar el label genérico del esport
-        return esportConfig.edgeLabels.winner;
+        
+        return `${currentCondition.field} ${currentCondition.operator} ${currentCondition.value}`;
       }
-      
-      return `${currentCondition.field} ${currentCondition.operator} ${currentCondition.value}`;
-    }
     return edgeData?.outcome || "condition";
   };
 
@@ -178,10 +230,10 @@ export default function EditableEdge({
     const currentCondition = edgeData?.condition || condition;
 
     if (currentCondition?.field === "default" || isDefault) {
-      if (esport !== "default") {
+      if (esport !== "fortnite") {
         return "Los equipos que pierdan el match seguirán este flujo hacia la derrota";
       }
-      return "Los participantes que no cumplan con las otras condiciones del match irán por este flujo. Recomendado para derrotas";
+      return "Los equipos que pierdan el match seguirán este flujo hacia la derrota";
     }
 
     if (!currentCondition) {
@@ -192,7 +244,6 @@ export default function EditableEdge({
 
     // Mapear campos a lenguaje natural
     const fieldNames: Record<string, string> = {
-      points: "puntos",
       position: "posición",
       score: "puntuación",
     };
@@ -211,7 +262,7 @@ export default function EditableEdge({
     const operatorName = operatorNames[operator] || operator;
 
     // Generar descripción contextual según el campo y esport
-    if (esport !== "default" && field === "score" && operator === ">") {
+    if (esport !== "fortnite" && field === "score" && operator === ">") {
       if (value === 0) {
         return "Los equipos que ganen al menos 1 ronda (BO1) seguirán este flujo";
       } else if (value === 1) {
@@ -221,17 +272,15 @@ export default function EditableEdge({
       }
     }
 
-    // Generar descripción contextual según el campo
-    switch (field) {
-      case "points":
-        return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán este camino`;
-      case "position":
-        return `Los participantes en ${fieldName} ${operatorName} ${value} continuarán por esta ruta`;
-      case "score":
-        return `Los participantes con ${fieldName} ${operatorName} ${value} tomarán este flujo`;
-      default:
-        return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán esta dirección`;
-    }
+          // Generar descripción contextual según el campo
+      switch (field) {
+        case "score":
+          return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán este camino`;
+        case "position":
+          return `Los participantes en ${fieldName} ${operatorName} ${value} continuarán por esta ruta`;
+        default:
+          return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán esta dirección`;
+      }
   };
 
   return (
@@ -301,7 +350,7 @@ export default function EditableEdge({
             // Editor súper compacto de condición
             <div className="bg-white border-2 border-blue-400 rounded p-2 shadow-lg min-w-fit">
               {/* Para esports competitivos, mostrar selector de BO1/BO3/BO5 */}
-              {esport !== "default" ? (
+              {esport !== "fortnite" ? (
                 <div className="mb-2">
                   <select
                     value={
@@ -346,31 +395,50 @@ export default function EditableEdge({
                   </select>
                 </div>
               ) : (
-                // Para esports flexibles, mostrar campos individuales
-                <div className="flex gap-1 mb-2">
+                // Para Fortnite, mostrar selector personalizado con campos configurables
+                <div className="mb-2 space-y-2">
                   <select
-                    value={condition.field}
-                    onChange={(e) =>
-                      setCondition({
-                        ...condition,
-                        field: e.target.value as
-                          | "points"
-                          | "position"
-                          | "score"
-                          | "default",
-                      })
+                    value={
+                      condition.field === "default" 
+                        ? "derrota" 
+                        : condition.field === "position"
+                        ? "victoria-posicion"
+                        : condition.field === "score"
+                        ? "victoria-score"
+                        : "custom"
                     }
-                    className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-16"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "derrota") {
+                        setCondition({
+                          field: "default",
+                          operator: ">=",
+                          value: 0,
+                        });
+                      } else if (value === "victoria-posicion") {
+                        setCondition({
+                          field: "position",
+                          operator: "<=",
+                          value: 10, // Top 10 por defecto
+                        });
+                      } else if (value === "victoria-score") {
+                        setCondition({
+                          field: "score",
+                          operator: ">=",
+                          value: 50, // Score mínimo por defecto
+                        });
+                      }
+                    }}
+                    className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-32"
                   >
-                    <option value="default">Default</option>
-                    <option value="points">Points</option>
-                    <option value="position">Position</option>
-                    <option value="score">Score</option>
+                    <option value="derrota">Derrota</option>
+                    <option value="victoria-posicion">Victoria por Posición</option>
+                    <option value="victoria-score">Victoria por Score</option>
                   </select>
 
-                  {/* Solo mostrar operador y valor si no es default */}
-                  {condition.field !== "default" && (
-                    <>
+                  {/* Campos configurables para victoria en Fortnite */}
+                  {condition.field !== "default" && esport === "fortnite" && (
+                    <div className="flex gap-1">
                       <select
                         value={condition.operator}
                         onChange={(e) =>
@@ -394,8 +462,8 @@ export default function EditableEdge({
                         value={condition.value}
                         onChange={(e) => {
                           const value = e.target.value;
-                          // Permitir solo números (incluyendo negativos)
-                          if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
+                          // Permitir solo números positivos
+                          if (value === "" || /^\d+$/.test(value)) {
                             setCondition({
                               ...condition,
                               value: value === "" ? 0 : Number(value),
@@ -403,11 +471,51 @@ export default function EditableEdge({
                           }
                         }}
                         className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
-                        placeholder="0"
+                        placeholder="10"
                       />
-                    </>
+                    </div>
                   )}
                 </div>
+              )}
+
+              {/* Solo mostrar operador y valor si no es default y no es Fortnite */}
+              {condition.field !== "default" && esport !== "fortnite" && (
+                <>
+                  <select
+                    value={condition.operator}
+                    onChange={(e) =>
+                      setCondition({
+                        ...condition,
+                        operator: e.target.value as ConditionOperator,
+                      })
+                    }
+                    className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10"
+                  >
+                    <option value=">=">&ge;</option>
+                    <option value="<=">&le;</option>
+                    <option value="==">=</option>
+                    <option value="!=">≠</option>
+                    <option value=">">&gt;</option>
+                    <option value="<">&lt;</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    value={condition.value}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Permitir solo números (incluyendo negativos)
+                      if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
+                        setCondition({
+                          ...condition,
+                          value: value === "" ? 0 : Number(value),
+                        });
+                      }
+                    }}
+                    className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
+                    placeholder="0"
+                  />
+                </>
               )}
 
               {/* Botones mejorados */}

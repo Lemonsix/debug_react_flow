@@ -908,11 +908,11 @@ function TournamentEditorInternal({
           id: newEdgeId,
           fromNode: params.source,
           toNode: params.target,
-          outcome: isFirstEdge ? "default" : "points >= 0",
+          outcome: isFirstEdge ? "default" : "score >= 0",
           editable: true,
           isDefault: isFirstEdge,
           condition: {
-            field: isFirstEdge ? ("default" as const) : ("points" as const),
+            field: isFirstEdge ? ("default" as const) : ("score" as const),
             operator: ">=" as const,
             value: 0,
           },
@@ -928,6 +928,11 @@ function TournamentEditorInternal({
         validateDefaultEdges(newEdges);
         return newEdges;
       });
+
+      // Abrir automáticamente el edge nuevo para edición (solo si no es el edge default)
+      if (!isFirstEdge) {
+        startEditing("edge", newEdgeId);
+      }
 
       // Agregar al historial
       addToHistory("ADD_EDGE", {
