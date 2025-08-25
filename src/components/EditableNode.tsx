@@ -272,7 +272,7 @@ export default function EditableNode({
                 : "Online"}
             </div>
             <div className="text-nowrap text-xs text-emerald-600 mb-2">
-              {formData.matchConfig.capacity} participantes
+              {formData.matchConfig.capacity} equipos
             </div>
             {formData.matchConfig.scheduledDate && (
               <div className="text-xs text-emerald-600 mb-2">

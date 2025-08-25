@@ -329,7 +329,7 @@ export function MatchConfigEditor({
         />
 
         <FormField
-          label="Participantes"
+          label="Equipos Participantes"
           value={config.capacity || ""}
           previousValue={config.capacity}
           defaultValue={2}
@@ -366,7 +366,7 @@ export function MatchConfigEditor({
           }}
           type="text"
           placeholder="Cantidad de equipos participantes del match"
-          tooltip="Cantidad de organizaciones a participar en el match"
+          tooltip="Cantidad de equipos a participar en el match"
           required
         />
 
