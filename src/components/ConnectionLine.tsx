@@ -70,10 +70,34 @@ export default function CustomConnectionLine({
 
   const style = getConnectionStyle();
   const label = getConnectionLabel();
+  
+  // Calcular posición del label
+  const labelX = (fromX + toX) / 2;
+  const labelY = (fromY + toY) / 2;
+  
+  // ID único para la máscara (evita conflictos si hay múltiples conexiones)
+  const maskId = `connectionMask-${fromX}-${fromY}-${toX}-${toY}`;
 
   return (
     <g>
-      {/* Línea de conexión principal */}
+      {/* Definición de la máscara SVG */}
+      <defs>
+        <mask id={maskId}>
+          {/* Todo visible por defecto */}
+          <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
+          {/* Hacemos el "agujero" donde va el label - rectángulo del tamaño del texto */}
+          <rect 
+            x={labelX - 25} 
+            y={labelY - 10} 
+            width={50} 
+            height={20} 
+            fill="black" 
+            rx={3}
+          />
+        </mask>
+      </defs>
+
+      {/* Línea de conexión principal con máscara aplicada */}
       <path
         d={edgePath}
         fill="none"
@@ -81,12 +105,13 @@ export default function CustomConnectionLine({
         strokeWidth={style.strokeWidth}
         strokeDasharray={style.strokeDasharray}
         className="react-flow__connection-line"
+        mask={`url(#${maskId})`}
       />
       
       {/* Label flotante en el centro de la conexión */}
       <text
-        x={(fromX + toX) / 2}
-        y={(fromY + toY) / 2}
+        x={labelX}
+        y={labelY}
         textAnchor="middle"
         dominantBaseline="middle"
         className="text-xs font-medium pointer-events-none select-none"
@@ -97,15 +122,6 @@ export default function CustomConnectionLine({
       >
         {label}
       </text>
-      
-      {/* Indicador visual adicional */}
-      <circle
-        cx={(fromX + toX) / 2}
-        cy={(fromY + toY) / 2}
-        r={3}
-        fill={style.stroke}
-        className="pointer-events-none"
-      />
     </g>
   );
 }
