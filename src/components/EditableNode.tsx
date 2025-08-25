@@ -1,13 +1,14 @@
 import { Handle, Position } from "@xyflow/react";
 import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useState, useMemo } from "react";
-import type { GraphNode, MatchConfiguration, EsportType } from "../types";
+import type { GraphNode, MatchConfiguration, EsportType, SinkConfiguration } from "../types";
 import {
   validateNodeForm,
   validateTournamentStructure,
 } from "../utils/validation";
-import { MatchConfigEditor } from "./FormComponents";
+import { MatchConfigEditor, PodiumConfigEditor } from "./FormComponents";
 import { validateMatchForEsport } from "../config/esports";
+import { LabeledHandle } from "./LabeledHandle";
 
 interface EditableNodeProps {
   data: GraphNode;
@@ -31,9 +32,14 @@ export default function EditableNode({
   esport,
 }: EditableNodeProps) {
   // Usar el estado global de edición en lugar del local
-  // Los nodos sink nunca pueden ser editados
+  // Los nodos sink pueden ser editados si son podios
   const isEditing =
-    data.type === "sink" ? false : globalIsEditing || data.editable;
+    data.type === "sink" && data.sinkConfig?.sinkType === "podium" 
+      ? globalIsEditing || data.editable
+      : data.type === "sink" 
+        ? false 
+        : globalIsEditing || data.editable;
+
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
@@ -43,6 +49,10 @@ export default function EditableNode({
       scheduledDate: undefined,
       scheduledTime: undefined,
       title: undefined,
+    },
+    sinkConfig: data.sinkConfig || {
+      sinkType: "podium" as const,
+      places: 3,
     },
   });
 
@@ -58,8 +68,12 @@ export default function EditableNode({
         scheduledTime: undefined,
         title: undefined,
       },
+      sinkConfig: data.sinkConfig || {
+        sinkType: "podium" as const,
+        places: 3,
+      },
     });
-  }, [data.type, data.capacity, data.matchConfig]);
+  }, [data.type, data.capacity, data.matchConfig, data.sinkConfig]);
 
 
 
@@ -101,7 +115,7 @@ export default function EditableNode({
     return validation;
   }, [validation, esportValidation, formData.type]);
 
-  // Actualizar datos del nodo (solo para nodos match)
+  // Actualizar datos del nodo (para nodos match y podios)
   const handleUpdate = useCallback(
     (field: string, value: unknown) => {
       const updates = { [field]: value };
@@ -139,6 +153,8 @@ export default function EditableNode({
         // Incluir matchConfig en las actualizaciones si es un nodo de match
         if (field === "matchConfig") {
           onChange({ ...updates, matchConfig: value as MatchConfiguration });
+        } else if (field === "sinkConfig") {
+          onChange({ ...updates, sinkConfig: value as SinkConfiguration });
         } else {
           onChange(updates);
         }
@@ -171,6 +187,10 @@ export default function EditableNode({
         modalidad: "presencial" as const,
         scheduledDate: undefined,
         scheduledTime: undefined,
+      },
+      sinkConfig: data.sinkConfig || {
+        sinkType: "podium" as const,
+        places: 3,
       },
     });
     // Desactivar la edición automáticamente
@@ -223,10 +243,77 @@ export default function EditableNode({
 
   const config = getNodeConfig();
 
+  // Generar handles dinámicamente para nodos podio y eliminación
+  const generateSinkHandles = () => {
+    if (data.type === "sink") {
+      if (data.sinkConfig?.sinkType === "podium") {
+        const places = data.sinkConfig.places || 3;
+        return Array.from({ length: places }, (_, index) => {
+          const position = index + 1;
+          let title = "";
+          if (position === 1) title = "🥇 1º Lugar";
+          else if (position === 2) title = "🥈 2º Lugar";
+          else if (position === 3) title = "🥉 3º Lugar";
+          else title = `${position}º Lugar`;
+          
+          // Calcular posición vertical para distribuir los handles uniformemente
+          // Usar porcentajes de 0 a 100 para cubrir toda la altura del nodo
+          // Ajustar para evitar superposición con el contenido del nodo
+          const startOffset = 15; // Comenzar después del header
+          const endOffset = 25; // Terminar antes del contenido inferior
+          const availableHeight = 100 - startOffset - endOffset;
+          const topPosition = startOffset + (availableHeight * (index + 1)) / (places + 1);
+          
+          return (
+            <LabeledHandle
+              key={`podium-${index}`}
+              id={`podium-${index}`}
+              title={title}
+              type="target"
+              position={Position.Left}
+              isConnectable={isConnectable}
+              isConnectableStart={false}
+              isConnectableEnd={true}
+              style={{ 
+                width: 25, 
+                height: 25,
+                top: `${topPosition}%`,
+                transform: 'translateY(-50%)',
+                position: 'absolute'
+              }}
+            />
+          );
+        });
+      } else if (data.sinkConfig?.sinkType === "disqualification") {
+        // Handle único para nodos de eliminación
+        return (
+          <LabeledHandle
+            key="elimination"
+            id="elimination"
+            title="Eliminación"
+            type="target"
+            position={Position.Left}
+            isConnectable={isConnectable}
+            isConnectableStart={false}
+            isConnectableEnd={true}
+            style={{ 
+              width: 25, 
+              height: 25,
+              top: "50%",
+              transform: 'translateY(-50%)',
+              position: 'absolute'
+            }}
+          />
+        );
+      }
+    }
+    return null;
+  };
+
   return (
     <div
       className={`
-        flex flex-row bg-background border-2 ${
+        flex flex-row bg-background border-2 min-w-48 ${
           config.border
         } rounded-lg shadow-sm
         hover:shadow-md transition-all duration-200
@@ -260,42 +347,50 @@ export default function EditableNode({
           } ${formData.type === "match" && !isEditing ? "" : "mb-3"}`}
         >
           <div className="flex items-center">
-            <div
-              className={`${config.accent} w-8 h-8 rounded-lg flex items-center justify-center`}
-            >
-              <span className="text-white text-sm font-bold">
-                {config.icon}
-              </span>
-            </div>
-            {formData.type !== "match" || isEditing ? (
-              <div>
-                <div className={`font-semibold text-sm ${config.text}`}>
-                  {data.type === "sink" &&
-                  data.sinkConfig?.sinkType === "podium"
-                    ? `Podio #${data.sinkConfig.position || 1}`
-                    : data.type === "sink" &&
-                      data.sinkConfig?.sinkType === "disqualification"
-                    ? "Eliminación"
-                    : data.type === "sink"
-                    ? "Resultado Final"
-                    : formData.type.toUpperCase()}
+            {/* Para nodos sink, mostrar el cuadrado de color a la derecha */}
+            {data.type === "sink" ? (
+              <>
+               
+                <div
+                  className={`${config.accent} w-8 h-8 rounded-lg flex items-center justify-center ml-3`}
+                >
+                  <span className="text-white text-sm font-bold">
+                    {config.icon}
+                  </span>
                 </div>
-              </div>
-            ) : null}
+              </>
+            ) : (
+              <>
+                <div
+                  className={`${config.accent} w-8 h-8 rounded-lg flex items-center justify-center`}
+                >
+                  <span className="text-white text-sm font-bold">
+                    {config.icon}
+                  </span>
+                </div>
+                <div>
+                  <div className={`font-semibold text-sm ${config.text}`}>
+                    {formData.type.toUpperCase()}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Botón de edición para nodos match */}
-          {formData.type === "match" && !isEditing && onStartEditing && (
+          {/* Botón de edición para nodos match y podios */}
+          {(formData.type === "match" || (data.type === "sink" && data.sinkConfig?.sinkType === "podium")) && !isEditing && onStartEditing && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onStartEditing?.();
               }}
-              className="absolute top-1 right-1 w-6 h-6 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+              className="absolute top-1 right-1 px-2 py-1 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm text-xs font-medium text-gray-700"
             >
-              <span className="hover:cursor-pointer">
+              {data.type === "sink" && data.sinkConfig?.sinkType === "podium" ? (
+                `${data.sinkConfig.places || 3} pos`
+              ) : (
                 <PencilIcon className="w-4 h-4" />
-              </span>
+              )}
             </button>
           )}
         </div>
@@ -353,6 +448,11 @@ export default function EditableNode({
                 onChange={(config) => handleUpdate("matchConfig", config)}
                 esport={esport}
               />
+            ) : data.type === "sink" && data.sinkConfig?.sinkType === "podium" ? (
+              <PodiumConfigEditor
+                config={formData.sinkConfig}
+                onChange={(config) => handleUpdate("sinkConfig", config)}
+              />
             ) : null}
 
             {/* Botones de acción */}
@@ -366,11 +466,11 @@ export default function EditableNode({
               </button>
               <button
                 onClick={handleSave}
-                disabled={!validation.isValid}
+                disabled={!combinedValidation.isValid}
                 className={`
                   flex flex-row gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors
                   ${
-                    validation.isValid
+                    combinedValidation.isValid
                       ? "bg-green-600 text-white hover:bg-green-700"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }
@@ -384,45 +484,24 @@ export default function EditableNode({
         </div>
       )}
 
-      {/* Información del nodo sink (solo lectura) */}
-      {data.type === "sink" && data.sinkConfig && (
-        <div className="text-left">
-          {data.sinkConfig.sinkType === "podium" ? (
-            <div className="text-center">
-              <div className="text-lg font-bold text-yellow-600 mb-1">
-                🏆 Podio #{data.sinkConfig.position || 1}
-              </div>
-              <div className="text-xs text-yellow-600">
-                {data.sinkConfig.position === 1 && "🥇 Primer Lugar"}
-                {data.sinkConfig.position === 2 && "🥈 Segundo Lugar"}
-                {data.sinkConfig.position === 3 && "🥉 Tercer Lugar"}
-                {data.sinkConfig.position &&
-                  data.sinkConfig.position > 3 &&
-                  `${data.sinkConfig.position}º Lugar`}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center">
-              <div className="text-lg font-bold text-red-600 mb-1">
-                ❌ Eliminación
-              </div>
-              <div className="text-xs text-red-600">
-                Participante descalificado
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Información para nodos sink */}
+     
 
       {/* Handles para conexiones - siempre visibles y más grandes */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={isConnectable}
-        style={{ width: 15, height: 15 }}
-      />
+      {data.type === "sink" ? (
+        // Handles para nodos sink (podio y eliminación)
+        generateSinkHandles()
+      ) : (
+        // Handle único para otros tipos de nodos
+        <Handle
+          type="target"
+          position={Position.Left}
+          isConnectable={isConnectable}
+          isConnectableStart={false}
+          isConnectableEnd={true}
+          style={{ width: 15, height: 15 }}
+        />
+      )}
+      
       {formData.type !== "sink" && (
         <Handle
           type="source"

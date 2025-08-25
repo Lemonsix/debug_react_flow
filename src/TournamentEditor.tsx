@@ -759,6 +759,7 @@ function TournamentEditorInternal({
         sinkConfig: {
           sinkType: "podium",
           position: 1,
+          places: 3,
         },
       };
 
@@ -1022,6 +1023,7 @@ function TournamentEditorInternal({
           sinkConfig: {
             sinkType: "podium" as const,
             position: podiumPosition,
+            places: 3,
           },
         }),
         ...(nodeType === "match" && {

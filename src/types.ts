@@ -57,6 +57,7 @@ export type SinkConfiguration = {
   position?: number; // Para podium positions
   reason?: string; // Para disqualifications
   threshold?: number; // Para qualifications
+  places?: number; // Para podios: cantidad de lugares (ej: 3 para 1º, 2º, 3º)
 };
 
 // Tipo que viene del backend de Go
