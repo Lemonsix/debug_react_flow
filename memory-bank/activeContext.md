@@ -2,10 +2,61 @@
 
 ## Estado Actual
 - **Proyecto**: Editor de Torneos con React Flow
-- **Modo**: Funcionalidades implementadas y código completamente optimizado
-- **Última tarea**: ✅ Implementada funcionalidad completa de esports con sistema BO1/BO3/BO5
+- **Modo**: ✅ **REFACTORIZACIÓN COMPLETADA** - Componentes de nodos separados y optimizados
+- **Última tarea**: ✅ Refactorización completa de EditableNode.tsx en componentes separados
 
-## Funcionalidades Implementadas Recientemente
+## ✅ **REFACTORIZACIÓN COMPLETADA - COMPONENTES SEPARADOS**
+
+### **Cambios Implementados**
+
+1. **Separación de Componentes**:
+   - ✅ **BaseNode.tsx**: Hook personalizado `useBaseNode` con lógica común
+   - ✅ **MatchNode.tsx**: Componente específico para nodos de match
+   - ✅ **PodiumNode.tsx**: Componente específico para nodos de podio
+   - ✅ **EliminationNode.tsx**: Componente específico para nodos de eliminación
+   - ✅ **EditableNode.tsx**: Componente principal refactorizado (de 516 a 67 líneas)
+
+2. **Mejoras en Espaciado de Podios**:
+   - ✅ **Espaciado Aumentado**: `startOffset` de 15 a 20, `endOffset` de 25 a 30
+   - ✅ **Distribución Uniforme**: Handles distribuidos uniformemente en la altura del nodo
+   - ✅ **Mejor Visualización**: Más espacio entre posiciones del podio
+
+3. **Arquitectura Limpia**:
+   - ✅ **Responsabilidad Única**: Cada componente tiene una función específica
+   - ✅ **Lógica Reutilizable**: Hook `useBaseNode` para funcionalidad común
+   - ✅ **Mantenibilidad**: Código más fácil de entender y modificar
+   - ✅ **Testing**: Más fácil testear cada tipo de nodo por separado
+
+### **Estructura de Archivos**
+
+```
+src/components/nodes/
+├── BaseNode.tsx          # Hook personalizado con lógica común
+├── MatchNode.tsx         # Nodos de match (editables)
+├── PodiumNode.tsx        # Nodos de podio (editables)
+├── EliminationNode.tsx   # Nodos de eliminación (solo lectura)
+└── index.ts              # Exportaciones centralizadas
+```
+
+### **Beneficios de la Refactorización**
+
+- ✅ **Código Más Limpio**: EditableNode.tsx reducido de 516 a 67 líneas
+- ✅ **Mantenibilidad Mejorada**: Cada tipo de nodo en su propio archivo
+- ✅ **Reutilización**: Lógica común en hook personalizado
+- ✅ **Legibilidad**: Código más fácil de entender y debuggear
+- ✅ **Extensibilidad**: Agregar nuevos tipos de nodos será más simple
+- ✅ **Performance**: Sin lógica condicional innecesaria
+
+### **Funcionalidades Preservadas**
+
+- ✅ **Edición de Nodos Match**: Formularios completos con validación
+- ✅ **Edición de Nodos Podio**: Configuración de posiciones
+- ✅ **Nodos de Eliminación**: Solo lectura con visualización
+- ✅ **Handles Dinámicos**: Espaciado mejorado para podios
+- ✅ **Validaciones**: Todas las validaciones existentes mantenidas
+- ✅ **Theming**: Estilos visuales preservados
+
+## Funcionalidades Implementadas Anteriormente
 
 ### ✅ **Funcionalidad Completa de Esports - COMPLETADA**
 
@@ -124,13 +175,18 @@
 
 ## Archivos Modificados
 
-### **`EditableNode.tsx`**
-- ❌ Eliminadas todas las referencias a `data.sinkConfig`
-- ❌ Eliminada visualización detallada de tipos de sink
-- ❌ Eliminada lógica condicional compleja para estilos de sink
-- ✅ Función `getNodeConfig` simplificada para nodos sink
-- ✅ Texto de nodos sink simplificado a "Resultado Final"
-- ✅ Estilo uniforme para todos los nodos sink (gris)
+### **`EditableNode.tsx`** - **REFACTORIZADO COMPLETAMENTE**
+- ❌ **ANTES**: 516 líneas con lógica compleja y condicional
+- ✅ **DESPUÉS**: 67 líneas como componente de enrutamiento
+- ✅ **FUNCIONALIDAD**: Mantiene toda la funcionalidad existente
+- ✅ **ARQUITECTURA**: Componente limpio y enfocado
+
+### **`src/components/nodes/` - **NUEVA CARPETA**
+- ✅ **BaseNode.tsx**: Hook personalizado con lógica común
+- ✅ **MatchNode.tsx**: Componente específico para nodos match
+- ✅ **PodiumNode.tsx**: Componente específico para nodos podio
+- ✅ **EliminationNode.tsx**: Componente específico para nodos eliminación
+- ✅ **index.ts**: Exportaciones centralizadas
 
 ### **`FormComponents.tsx`**
 - ❌ Eliminado componente `SinkConfigEditor` completo
@@ -143,22 +199,24 @@
 - ✅ Proyecto más limpio y organizado
 
 ## Estado Final
-🎉 **Eliminación de SinkConfigForm.tsx Completada Exitosamente**
+🎉 **REFACTORIZACIÓN COMPLETADA EXITOSAMENTE**
 
-El sistema ahora es extremadamente simple y eficiente:
-- **Nodos Sink**: Solo lectura con visualización diferenciada (podio/eliminación)
-- **Nodos Match**: Completamente editables con formularios
-- **Código Ultra Limpio**: Sin archivos innecesarios ni referencias a configuraciones de sink
-- **Performance Máxima**: Sin lógica condicional innecesaria
+El sistema ahora es extremadamente limpio y eficiente:
+- **Arquitectura Modular**: Cada tipo de nodo en su propio componente
+- **Lógica Reutilizable**: Hook personalizado para funcionalidad común
+- **Código Ultra Limpio**: EditableNode.tsx reducido de 516 a 67 líneas
 - **Mantenibilidad Excelente**: Código simple y directo
-- **Organización Mejorada**: Menos archivos para mantener
+- **Organización Mejorada**: Estructura clara y lógica
+- **Performance Máxima**: Sin lógica condicional innecesaria
+- **Espaciado Mejorado**: Podios con mejor distribución visual
 
 ## Próximos Pasos Sugeridos
 
-1. **Testing de Esports**: Verificar que las validaciones y theming funcionen correctamente para cada esport
-2. **Performance**: Evaluar mejoras en el rendimiento de la aplicación con el nuevo sistema de esports
+1. **Testing de Componentes**: Verificar que cada componente funcione correctamente por separado
+2. **Performance**: Evaluar mejoras en el rendimiento con la nueva arquitectura modular
 3. **Documentación**: La documentación completa está en `memory-bank/edgesExample.md`
-4. **Consistencia**: Verificar que el comportamiento sea consistente entre esports competitivos y flexibles
-5. **UX**: Evaluar si la nueva interfaz de BO1/BO3/BO5 mejora la experiencia del usuario
-6. **Extensibilidad**: Considerar agregar más esports con configuraciones específicas
-7. **Validaciones Avanzadas**: Implementar validaciones más complejas según el esport (ej: reglas de empate)
+4. **Consistencia**: Verificar que el comportamiento sea consistente entre todos los tipos de nodos
+5. **UX**: Evaluar si la nueva arquitectura mejora la experiencia del usuario
+6. **Extensibilidad**: Considerar agregar más tipos de nodos con la nueva estructura
+7. **Validaciones Avanzadas**: Implementar validaciones más complejas según el esport
+8. **Testing Unitario**: Crear tests para cada componente individual

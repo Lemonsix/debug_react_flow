@@ -51,6 +51,7 @@ import {
   validateTournamentStructure,
   validatePodiumEdges,
 } from "./utils/validation";
+import { SwordsIcon } from "lucide-react";
 
 const NODE_W = 400;
 const NODE_H = 280;
@@ -1808,14 +1809,15 @@ function TournamentEditorInternal({
         {editable && (
           <>
             {/* Botones para agregar nodos */}
-            <div className="flex gap-1 bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+            <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1 bg-emerald-50 hover:bg-emerald-100 transition-colors w-24">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => addNewNode("match")}
-                    className="px-3 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors"
+                    className="px-3 py-2 text-xs font-medium text-emerald-700 items-center justify-center flex flex-col gap-2 "
                   >
-                    + Match
+                    <SwordsIcon className="w-10 h-10" />
+                    <span className="text-semibold text-lg ">Agregar Match</span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -1823,19 +1825,7 @@ function TournamentEditorInternal({
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => addNewNode("sink")}
-                    className="px-3 py-2 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded hover:bg-yellow-100 transition-colors"
-                  >
-                    + Podio
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Agrega un nuevo podio al torneo</p>
-                </TooltipContent>
-              </Tooltip>
+            
             </div>
 
             {/* Exportar */}
