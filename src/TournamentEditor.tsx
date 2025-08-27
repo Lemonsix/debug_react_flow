@@ -96,7 +96,8 @@ function TournamentEditorInternal({
   const [isDraggingNode, setIsDraggingNode] = useState(false);
 
   // Hook para manejar el estado de la conexión
-  const { connectionStart, startConnection, endConnection } = useConnectionState();
+  const { connectionStart, startConnection, endConnection } =
+    useConnectionState();
 
   // Funciones para manejar el estado de edición global
   const startEditing = useCallback((type: "node" | "edge", id: string) => {
@@ -724,7 +725,6 @@ function TournamentEditorInternal({
       const matchId = `node-${timestamp}-match`;
       const matchNode: GraphNode = {
         id: matchId,
-        phaseId: graph.phaseId,
         type: "match",
         capacity: 2,
         slots: Array.from({ length: 2 }, (_, i) => ({ index: i })),
@@ -751,7 +751,6 @@ function TournamentEditorInternal({
       const podiumId = `node-${timestamp}-podium`;
       const podiumNode: GraphNode = {
         id: podiumId,
-        phaseId: graph.phaseId,
         type: "sink",
         capacity: 0,
         slots: [],
@@ -777,7 +776,6 @@ function TournamentEditorInternal({
       const disqualificationId = `node-${timestamp}-disqualification`;
       const disqualificationNode: GraphNode = {
         id: disqualificationId,
-        phaseId: graph.phaseId,
         type: "sink",
         capacity: 0,
         slots: [],
@@ -819,7 +817,7 @@ function TournamentEditorInternal({
         }
       }
     }
-  }, [graph.phaseId, editable, setNodes, addToHistory, nodes, startEditing]);
+  }, [editable, setNodes, addToHistory, nodes, startEditing]);
 
   // Validar estructura mínima del torneo cuando se cargan los nodos
   useEffect(() => {
@@ -943,26 +941,31 @@ function TournamentEditorInternal({
         style: { strokeWidth: 1.5 },
       };
 
-
-
       // Usar la utilidad addEdge de React Flow para mejor rendimiento
       setEdges((eds) => {
         let newEdges = addEdge(newEdge, eds);
-        
+
         // Validación especial para podios: solo permitir 1 edge de entrada
         const targetNode = nodes.find((n) => n.id === params.target);
-        if (targetNode?.data.type === "sink" && 
-            (targetNode.data as GraphNode).sinkConfig?.sinkType === "podium") {
-          
+        if (
+          targetNode?.data.type === "sink" &&
+          (targetNode.data as GraphNode).sinkConfig?.sinkType === "podium"
+        ) {
           // Usar la función de utilidad para validar podios
           const graphNodes = nodes.map((n) => n.data as GraphNode);
           const graphEdges = newEdges.map((e) => e.data as GraphEdge);
           const podiumValidation = validatePodiumEdges(graphNodes, graphEdges);
-          
-          if (!podiumValidation.valid && podiumValidation.edgesToRemove.length > 0) {
+
+          if (
+            !podiumValidation.valid &&
+            podiumValidation.edgesToRemove.length > 0
+          ) {
             // Eliminar los edges anteriores
-            newEdges = newEdges.filter((e) => !podiumValidation.edgesToRemove.includes(e.data as GraphEdge));
-            
+            newEdges = newEdges.filter(
+              (e) =>
+                !podiumValidation.edgesToRemove.includes(e.data as GraphEdge)
+            );
+
             // Agregar al historial la eliminación de edges
             podiumValidation.edgesToRemove.forEach((edge) => {
               addToHistory("DELETE_EDGE", {
@@ -970,11 +973,13 @@ function TournamentEditorInternal({
                 beforeState: edge,
               });
             });
-            
-            console.log(`🏆 Podio ${params.target}: Edge anterior eliminado, manteniendo solo el más reciente`);
+
+            console.log(
+              `🏆 Podio ${params.target}: Edge anterior eliminado, manteniendo solo el más reciente`
+            );
           }
         }
-        
+
         // Validar que la lógica de default sea correcta
         const validatedEdges = validateDefaultEdges(newEdges);
         return validatedEdges;
@@ -1011,7 +1016,6 @@ function TournamentEditorInternal({
 
       const newNode: GraphNode = {
         id: newId,
-        phaseId: graph.phaseId,
         type: nodeType,
         capacity: nodeType === "sink" ? 0 : 2,
         slots:
@@ -1053,14 +1057,7 @@ function TournamentEditorInternal({
         afterState: reactFlowNode,
       });
     },
-    [
-      graph.phaseId,
-      editable,
-      setNodes,
-      addToHistory,
-      nodes,
-      autoSaveAndCloseEditing,
-    ]
+    [editable, setNodes, addToHistory, nodes, autoSaveAndCloseEditing]
   );
 
   // Undo
@@ -1817,15 +1814,15 @@ function TournamentEditorInternal({
                     className="px-3 py-2 text-xs font-medium text-emerald-700 items-center justify-center flex flex-col gap-2 "
                   >
                     <SwordsIcon className="w-10 h-10" />
-                    <span className="text-semibold text-lg ">Agregar Match</span>
+                    <span className="text-semibold text-lg ">
+                      Agregar Match
+                    </span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Un match es un nodo que representa una partida</p>
                 </TooltipContent>
               </Tooltip>
-
-            
             </div>
 
             {/* Exportar */}
@@ -1897,8 +1894,6 @@ function TournamentEditorInternal({
         <MiniMap pannable zoomable nodeColor="#6b7280" />
         <Controls />
         <Background />
-        
-
       </ReactFlow>
 
       {/* Status Bar */}

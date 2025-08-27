@@ -170,7 +170,6 @@ El JSON exportado contiene:
 {
   "version": 1,
   "tournamentId": "string",
-  "phaseId": "string",
   "nodes": [...],
   "edges": [...],
   "metadata": {

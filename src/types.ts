@@ -1,12 +1,12 @@
 export type NodeType = "match" | "sink";
 
 // Nuevos tipos para esports
-export type EsportType = 
-  | "cs2" 
-  | "valorant" 
-  | "fifa" 
-  | "clash-royale" 
-  | "teamfight-tactics" 
+export type EsportType =
+  | "cs2"
+  | "valorant"
+  | "fifa"
+  | "clash-royale"
+  | "teamfight-tactics"
   | "fortnite";
 
 export type EsportConfiguration = {
@@ -35,12 +35,6 @@ export type MatchConfiguration = {
   title?: string; // título del match (ej: Final, Semifinal, Cuartos)
 };
 
-export type PhaseSink = {
-  kind: string;
-  podiumPos?: number;
-  reason?: string;
-};
-
 // Nuevos tipos para funcionalidades de edición
 export type ConditionOperator = ">=" | "<=" | "==" | "!=" | ">" | "<";
 
@@ -64,7 +58,6 @@ export type SinkConfiguration = {
 export type GoBackendGraph = {
   nodes: Array<{
     id: string;
-    phase_id: string;
     type: NodeType;
     esport: string;
     capacity: number;
@@ -75,7 +68,6 @@ export type GoBackendGraph = {
     fromNode: string;
     outcome: string;
     toNode?: string;
-    sink?: PhaseSink;
   }>;
   slots?: Array<{
     node_id: string;
@@ -89,7 +81,6 @@ export type GoBackendGraph = {
 // Tipo que usa el componente (simplificado)
 export type GraphNode = {
   id: string;
-  phaseId: string;
   type: NodeType;
   capacity: number;
   slots: Array<{
@@ -112,7 +103,6 @@ export type GraphEdge = {
   fromNode: string;
   outcome: string;
   toNode?: string;
-  sink?: PhaseSink;
   // Nuevas propiedades para condiciones editables
   condition?: EdgeCondition;
   editable?: boolean;
@@ -123,7 +113,6 @@ export type GraphEdge = {
 export type TournamentGraph = {
   version: 1;
   tournamentId: string;
-  phaseId: string;
   nodes: GraphNode[];
   edges: GraphEdge[];
   // Nuevas propiedades para configuración global
