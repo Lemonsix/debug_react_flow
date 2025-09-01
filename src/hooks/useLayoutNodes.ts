@@ -1,149 +1,116 @@
-import { useEffect } from "react";
+import { useCallback } from "react";
 import ELK from "elkjs/lib/elk.bundled.js";
-import {
-  type Edge,
-  type Node,
-  useNodesInitialized,
-  useReactFlow,
-} from "@xyflow/react";
+import { useReactFlow, type Node } from "@xyflow/react";
 
 import { type GraphNode, isSinkConfiguration } from "../types";
 
-// elk layouting options can be found here:
-// https://www.eclipse.org/elk/reference/algorithms/org-eclipse-elk-layered.html
-const layoutOptions = {
-  "elk.algorithm": "layered",
-  "elk.direction": "RIGHT",
-  "elk.layered.spacing.edgeNodeBetweenLayers": "40",
-  "elk.layered.spacing.nodeNodeBetweenLayers": "60",
-  "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-  "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST",
-  "elk.layered.layering.strategy": "NETWORK_SIMPLEX",
-  "elk.layered.nodePlacement.bk.fixedAlignment": "NONE",
-  "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-  "elk.layered.spacing.edgeEdgeBetweenLayers": "20",
-  "elk.layered.spacing.edgeEdge": "10",
-  "elk.layered.spacing.nodeNode": "20",
-  "elk.spacing.componentComponent": "80",
-  "elk.spacing.nodeNode": "50",
-  "elk.spacing.edgeEdge": "10",
-  "elk.spacing.edgeNode": "20",
-  "elk.spacing.labelLabel": "10",
-  "elk.spacing.labelNode": "15",
-  "elk.spacing.labelEdge": "15",
-};
-
 const elk = new ELK();
 
-// uses elkjs to give each node a layouted position
-export const getLayoutedNodes = async (nodes: GraphNode[], edges: Edge[]) => {
-  const graph = {
-    id: "root",
-    layoutOptions,
-    children: nodes.map((n) => {
-      // Para nodos de match, crear ports para los handles
-      const ports = [];
-
-      if (n.type === "match") {
-        // Agregar port principal del nodo
-        ports.push({ id: n.id });
-
-        // Agregar ports para los handles de entrada/salida
-        for (let i = 0; i < (n.capacity || 0); i++) {
-          ports.push({
-            id: `match-${n.id}-${i}`,
-            properties: {
-              side: "WEST", // Handles de entrada a la izquierda
-            },
-          });
-        }
-
-        // Agregar ports para handles de salida
-        ports.push({
-          id: `match-${n.id}-out`,
-          properties: {
-            side: "EAST", // Handles de salida a la derecha
-          },
-        });
-      } else if (n.type === "sink") {
-        // Para nodos sink (podio), crear ports para cada posición
-        ports.push({ id: n.id });
-
-        const places =
-          n.config && isSinkConfiguration(n.config) ? n.config.places || 3 : 3;
-        for (let i = 0; i < places; i++) {
-          ports.push({
-            id: `sink-${n.id}-${i}`,
-            properties: {
-              side: "WEST", // Handles de entrada a la izquierda
-            },
-          });
-        }
-      }
-
-      return {
-        id: n.id,
-        width: n.type === "sink" ? 120 : 150,
-        height:
-          n.type === "sink"
-            ? Math.max(
-                80,
-                (n.config && isSinkConfiguration(n.config)
-                  ? n.config.places || 3
-                  : 3) * 30
-              )
-            : 80,
-        properties: {
-          "org.eclipse.elk.portConstraints": "FIXED_ORDER",
-        },
-        ports,
-      };
-    }),
-    edges: edges.map((e) => ({
-      id: e.id,
-      sources: [e.sourceHandle || e.source],
-      targets: [e.targetHandle || e.target],
-    })),
-  };
-
-  const layoutedGraph = await elk.layout(graph);
-
-  const layoutedNodes = nodes.map((node) => {
-    const layoutedNode = layoutedGraph.children?.find(
-      (lgNode) => lgNode.id === node.id
-    );
-
-    return {
-      ...node,
-      position: {
-        x: layoutedNode?.x ?? 0,
-        y: layoutedNode?.y ?? 0,
-      },
-    };
-  });
-
-  return layoutedNodes;
-};
-
+// Hook simple siguiendo exactamente el patrón de React Flow
 export default function useLayoutNodes() {
-  const nodesInitialized = useNodesInitialized();
-  const { getNodes, getEdges, setNodes, fitView } = useReactFlow();
+  const { getNodes, setNodes, getEdges, fitView } = useReactFlow();
 
-  useEffect(() => {
-    if (nodesInitialized) {
-      const layoutNodes = async () => {
-        const layoutedNodes = await getLayoutedNodes(
-          getNodes() as unknown as GraphNode[],
-          getEdges()
-        );
-
-        setNodes(layoutedNodes as unknown as Node[]);
-        fitView();
+  const getLayoutedElements = useCallback(
+    (options = {}) => {
+      const defaultOptions = {
+        "elk.algorithm": "layered",
+        "elk.direction": "RIGHT", // Dirección horizontal para torneos
+        "elk.layered.spacing.nodeNodeBetweenLayers": "150", // Más espacio entre capas
+        "elk.layered.spacing.edgeNodeBetweenLayers": "50", // Espacio entre edges y nodos
+        "elk.spacing.nodeNode": "100", // Más espacio entre nodos
+        "elk.spacing.componentComponent": "200", // Espacio entre componentes
+        "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP", // Minimizar cruces
+        "elk.layered.layering.strategy": "LONGEST_PATH", // Estrategia de capas
+        "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX", // Posicionamiento de nodos
+        "elk.layered.cycleBreaking.strategy": "DEPTH_FIRST", // Romper ciclos
+        "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES", // Considerar orden del modelo
       };
 
-      layoutNodes();
-    }
-  }, [nodesInitialized, getNodes, getEdges, setNodes, fitView]);
+      const currentNodes = getNodes() as unknown as GraphNode[];
+      const currentEdges = getEdges();
 
-  return null;
+      if (currentNodes.length === 0) return;
+
+      // Detectar complejidad del grafo y ajustar configuración
+      const nodeCount = currentNodes.length;
+      const edgeCount = currentEdges.length;
+      const isComplexGraph = nodeCount > 8 || edgeCount > 12;
+
+      // Configuración adaptativa basada en la complejidad
+      const adaptiveOptions = isComplexGraph
+        ? {
+            "elk.layered.spacing.nodeNodeBetweenLayers": "200", // Más espacio para grafos complejos
+            "elk.spacing.nodeNode": "120",
+            "elk.spacing.componentComponent": "300",
+            "elk.layered.crossingMinimization.strategy": "INTERACTIVE", // Mejor para grafos complejos
+          }
+        : {};
+
+      const layoutOptions = {
+        ...defaultOptions,
+        ...adaptiveOptions,
+        ...options,
+      };
+
+      const graph = {
+        id: "root",
+        layoutOptions: layoutOptions,
+        children: currentNodes.map((node) => ({
+          ...node,
+          width: node.type === "sink" ? 120 : 150,
+          height:
+            node.type === "sink"
+              ? Math.max(
+                  80,
+                  (node.config && isSinkConfiguration(node.config)
+                    ? node.config.places || 3
+                    : 3) * 30
+                )
+              : 80,
+        })),
+        edges: currentEdges.map((edge) => ({
+          id: edge.id,
+          sources: [edge.source],
+          targets: [edge.target],
+        })),
+      };
+
+      console.log(
+        `Applying ELK layout to ${nodeCount} nodes, ${edgeCount} edges (complex: ${isComplexGraph})`
+      );
+
+      elk
+        .layout(graph)
+        .then(({ children }) => {
+          if (children) {
+            console.log("ELK layout completed successfully");
+
+            // By mutating the children in-place we saves ourselves from creating a
+            // needless copy of the nodes array.
+            children.forEach(
+              (node: {
+                id: string;
+                x?: number;
+                y?: number;
+                position?: { x: number; y: number };
+              }) => {
+                if (node.x !== undefined && node.y !== undefined) {
+                  node.position = { x: node.x, y: node.y };
+                }
+              }
+            );
+
+            setNodes(children as unknown as Node[]);
+            fitView();
+          }
+        })
+        .catch((error) => {
+          console.error("ELK layout failed:", error);
+          // Fallback: mantener las posiciones actuales
+        });
+    },
+    [getNodes, getEdges, setNodes, fitView]
+  );
+
+  return { getLayoutedElements };
 }

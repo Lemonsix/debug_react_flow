@@ -106,8 +106,8 @@ function TournamentEditorInternal({
   const { connectionStart, startConnection, endConnection } =
     useConnectionState();
 
-  // Hook para ELK layout
-  useLayoutNodes();
+  // Hook para ELK layout (solo manual)
+  const { getLayoutedElements } = useLayoutNodes();
 
   // Funciones para manejar el estado de edición global
   // Solo un elemento puede estar en edición a la vez
@@ -135,6 +135,19 @@ function TournamentEditorInternal({
       stopEditing();
     }
   }, [graph.tournamentId, stopEditing]);
+
+  // Aplicar layout automático cuando se aplica un template
+  useEffect(() => {
+    if (graph.nodes.length > 0) {
+      // Usar un delay para asegurar que los nodos estén renderizados
+      const timer = setTimeout(() => {
+        console.log("Auto-applying layout after template application");
+        getLayoutedElements();
+      }, 200); // Aumentado el delay para asegurar que todo esté renderizado
+
+      return () => clearTimeout(timer);
+    }
+  }, [graph.tournamentId, getLayoutedElements]);
 
   const isCurrentlyEditing = useCallback(
     (type: "node" | "edge", id: string) => {
@@ -1933,6 +1946,14 @@ function TournamentEditorInternal({
           className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-md"
         >
           ↻ Reset Layout
+        </button>
+
+        {/* ELK Layout - Horizontal */}
+        <button
+          onClick={() => getLayoutedElements()}
+          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md"
+        >
+          📐 Auto Layout
         </button>
 
         {/* Indicador de modo edición */}

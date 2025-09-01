@@ -18,6 +18,9 @@ function createMatchNode(
   y: number,
   title?: string
 ) {
+  // Parámetros x, y no se usan para permitir ELK layout automático
+  void x;
+  void y;
   return {
     id,
     type: "match" as const,
@@ -35,7 +38,8 @@ function createMatchNode(
       modalidad: "online" as const,
       title,
     },
-    position: { x, y },
+    // No definir posición fija para permitir ELK layout
+    // position: { x, y },
   };
 }
 
@@ -46,6 +50,9 @@ function createEliminationNode(
   y: number,
   title?: string
 ) {
+  // Parámetros x, y no se usan para permitir ELK layout automático
+  void x;
+  void y;
   return {
     id,
     type: "sink" as const,
@@ -61,7 +68,8 @@ function createEliminationNode(
       sinkType: "eliminacion" as const,
       reason: title || "Eliminado",
     },
-    position: { x, y },
+    // No definir posición fija para permitir ELK layout
+    // position: { x, y },
   };
 }
 
@@ -72,6 +80,9 @@ function createSingleEliminationNode(x: number, y: number) {
 
 // Función helper para crear nodos de podio
 function createPodiumNode(id: string, places: number, x: number, y: number) {
+  // Parámetros x, y no se usan para permitir ELK layout automático
+  void x;
+  void y;
   return {
     id,
     type: "sink" as const,
@@ -87,7 +98,8 @@ function createPodiumNode(id: string, places: number, x: number, y: number) {
       sinkType: "podium" as const,
       places,
     },
-    position: { x, y },
+    // No definir posición fija para permitir ELK layout
+    // position: { x, y },
   };
 }
 
@@ -473,16 +485,16 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
       const nodes = [
-        // Llave ganadora
-        createMatchNode("ganadora-1", 2, 100, 50, "Ganadora 1"),
-        createMatchNode("ganadora-2", 2, 100, 150, "Ganadora 2"),
-        createMatchNode("ganadora-3", 2, 100, 250, "Ganadora 3"),
-        createMatchNode("ganadora-4", 2, 100, 350, "Ganadora 4"),
-        createMatchNode("ganadora-semi-1", 2, 250, 100, "Ganadora Semi 1"),
-        createMatchNode("ganadora-semi-2", 2, 250, 300, "Ganadora Semi 2"),
-        createMatchNode("ganadora-final", 2, 400, 200, "Ganadora Final"),
+        // Llave ganadora (izquierda)
+        createMatchNode("ganadora-1", 2, 50, 50, "Ganadora 1"),
+        createMatchNode("ganadora-2", 2, 50, 150, "Ganadora 2"),
+        createMatchNode("ganadora-3", 2, 50, 250, "Ganadora 3"),
+        createMatchNode("ganadora-4", 2, 50, 350, "Ganadora 4"),
+        createMatchNode("ganadora-semi-1", 2, 200, 100, "Ganadora Semi 1"),
+        createMatchNode("ganadora-semi-2", 2, 200, 300, "Ganadora Semi 2"),
+        createMatchNode("ganadora-final", 2, 350, 200, "Ganadora Final"),
 
-        // Llave perdedora
+        // Llave perdedora (centro)
         createMatchNode("perdedora-1", 2, 500, 50, "Perdedora 1"),
         createMatchNode("perdedora-2", 2, 500, 150, "Perdedora 2"),
         createMatchNode("perdedora-3", 2, 500, 250, "Perdedora 3"),
@@ -491,13 +503,12 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("perdedora-semi-2", 2, 650, 300, "Perdedora Semi 2"),
         createMatchNode("perdedora-final", 2, 800, 200, "Perdedora Final"),
 
-        // Final del torneo
-        createMatchNode("final-torneo", 2, 600, 200, "Final del Torneo"),
+        // Final del torneo (centro-derecha)
+        createMatchNode("final-torneo", 2, 950, 200, "Final del Torneo"),
 
-        // Podio único con 3 posiciones
-        createPodiumNode("podium", 3, 900, 200),
-        // Nodo de eliminación para perdedores
-        createSingleEliminationNode(100, 450),
+        // Podio y eliminación (extrema derecha)
+        createPodiumNode("podium", 3, 1200, 200),
+        createSingleEliminationNode(1200, 400),
       ];
 
       const edges = [
@@ -749,13 +760,13 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
       const nodes = [
-        // Llave ganadora (simplificada para 16 equipos)
+        // Llave ganadora (izquierda) - 16 equipos
         ...Array.from({ length: 8 }, (_, i) =>
           createMatchNode(
             `ganadora-${i + 1}`,
             2,
-            100,
-            50 + i * 50,
+            50,
+            30 + i * 60,
             `Ganadora ${i + 1}`
           )
         ),
@@ -763,20 +774,20 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           createMatchNode(
             `ganadora-semi-${i + 1}`,
             2,
-            250,
-            100 + i * 120,
+            200,
+            60 + i * 150,
             `Ganadora Semi ${i + 1}`
           )
         ),
-        createMatchNode("ganadora-final", 2, 400, 220, "Ganadora Final"),
+        createMatchNode("ganadora-final", 2, 350, 300, "Ganadora Final"),
 
-        // Llave perdedora (simplificada para 16 equipos)
+        // Llave perdedora (centro) - 16 equipos
         ...Array.from({ length: 8 }, (_, i) =>
           createMatchNode(
             `perdedora-${i + 1}`,
             2,
             500,
-            50 + i * 50,
+            30 + i * 60,
             `Perdedora ${i + 1}`
           )
         ),
@@ -785,19 +796,18 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
             `perdedora-semi-${i + 1}`,
             2,
             650,
-            100 + i * 120,
+            60 + i * 150,
             `Perdedora Semi ${i + 1}`
           )
         ),
-        createMatchNode("perdedora-final", 2, 800, 220, "Perdedora Final"),
+        createMatchNode("perdedora-final", 2, 800, 300, "Perdedora Final"),
 
-        // Final del torneo
-        createMatchNode("final-torneo", 2, 600, 220, "Final del Torneo"),
+        // Final del torneo (centro-derecha)
+        createMatchNode("final-torneo", 2, 950, 300, "Final del Torneo"),
 
-        // Podio único con 3 posiciones
-        createPodiumNode("podium", 3, 900, 220),
-        // Nodo de eliminación para perdedores
-        createSingleEliminationNode(100, 500),
+        // Podio y eliminación (extrema derecha)
+        createPodiumNode("podium", 3, 1200, 300),
+        createSingleEliminationNode(1200, 500),
       ];
 
       const edges = [
