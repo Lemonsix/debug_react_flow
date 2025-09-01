@@ -1,4 +1,9 @@
-import type { TournamentGraph, EsportType } from "../types";
+import type {
+  TournamentGraph,
+  EsportType,
+  GraphNode,
+  GraphEdge,
+} from "../types";
 
 export type TournamentTemplate = {
   id: string;
@@ -9,6 +14,27 @@ export type TournamentTemplate = {
   esports: EsportType[];
   generateGraph: (esport: EsportType) => TournamentGraph;
 };
+
+function validateInboundCapacity(nodes: GraphNode[], edges: GraphEdge[]) {
+  const cap = new Map(
+    nodes.map((n) => [
+      n.id,
+      n.capacity ??
+        (n.config && "places" in n.config ? n.config.places : undefined) ??
+        Infinity,
+    ])
+  );
+  const inbound = new Map<string, number>();
+  for (const e of edges) {
+    if (e.toNode) {
+      inbound.set(e.toNode, (inbound.get(e.toNode) ?? 0) + 1);
+    }
+  }
+  const violations = [...inbound.entries()].filter(
+    ([id, count]) => count > (cap.get(id) ?? Infinity)
+  );
+  return violations; // [[nodeId, inboundEdges], ...]
+}
 
 // Función helper para crear nodos de match
 function createMatchNode(
@@ -196,6 +222,12 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createEdge("edge-8", "tercer-lugar", "eliminacion", "Perdedor", true),
       ];
 
+      // Validar capacity antes de retornar
+      const violations = validateInboundCapacity(nodes, edges);
+      if (violations.length > 0) {
+        console.warn("Capacity violations detected:", violations);
+      }
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-4-${Date.now()}`,
@@ -288,6 +320,12 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         // 3er Lugar → Eliminación (perdedor)
         createEdge("edge-16", "tercer-lugar", "eliminacion", "Perdedor", true),
       ];
+
+      // Validar capacity antes de retornar
+      const violations = validateInboundCapacity(nodes, edges);
+      if (violations.length > 0) {
+        console.warn("Capacity violations detected:", violations);
+      }
 
       return {
         version: 1,
@@ -457,6 +495,12 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         ),
       ];
 
+      // Validar capacity antes de retornar
+      const violations = validateInboundCapacity(nodes, edges);
+      if (violations.length > 0) {
+        console.warn("Capacity violations detected:", violations);
+      }
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-16-${Date.now()}`,
@@ -556,46 +600,46 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           false
         ),
 
-        // Llave ganadora (perdedores van a eliminación)
+        // Llave ganadora (perdedores van al lower bracket)
         createEdge(
-          "edge-g1-elim",
+          "edge-g1-lower",
           "ganadora-1",
-          "eliminacion",
+          "perdedora-1",
           "Perdedor",
           true
         ),
         createEdge(
-          "edge-g2-elim",
+          "edge-g2-lower",
           "ganadora-2",
-          "eliminacion",
+          "perdedora-2",
           "Perdedor",
           true
         ),
         createEdge(
-          "edge-g3-elim",
+          "edge-g3-lower",
           "ganadora-3",
-          "eliminacion",
+          "perdedora-3",
           "Perdedor",
           true
         ),
         createEdge(
-          "edge-g4-elim",
+          "edge-g4-lower",
           "ganadora-4",
-          "eliminacion",
+          "perdedora-4",
           "Perdedor",
           true
         ),
         createEdge(
-          "edge-gs1-elim",
+          "edge-gs1-lower",
           "ganadora-semi-1",
-          "eliminacion",
+          "perdedora-semi-1",
           "Perdedor",
           true
         ),
         createEdge(
-          "edge-gs2-elim",
+          "edge-gs2-lower",
           "ganadora-semi-2",
-          "eliminacion",
+          "perdedora-semi-2",
           "Perdedor",
           true
         ),
@@ -704,7 +748,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           false
         ),
 
-        // Final → Podio (1er lugar)
+        // Final → Podio (1er lugar) - GANADOR del torneo
         createEdge(
           "edge-ft-1",
           "final-torneo",
@@ -713,25 +757,39 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           false,
           "sink-podium-0"
         ),
-        // Ganadora Final → Podio (2do lugar)
+        // Final → Podio (2do lugar) - PERDEDOR de la final
         createEdge(
           "edge-ft-2",
-          "ganadora-final",
+          "final-torneo",
           "podium",
           "Perdedor",
           true,
           "sink-podium-1"
         ),
-        // Perdedora Final → Podio (3er lugar)
+        // Perdedora Final → Podio (3er lugar) - GANADOR del lower bracket
         createEdge(
           "edge-ft-3",
           "perdedora-final",
           "podium",
-          "Perdedor",
-          true,
+          "Ganador",
+          false,
           "sink-podium-2"
         ),
+        // Perdedora Final → Eliminación (perdedor del lower bracket)
+        createEdge(
+          "edge-ft-4",
+          "perdedora-final",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
       ];
+
+      // Validar capacity antes de retornar
+      const violations = validateInboundCapacity(nodes, edges);
+      if (violations.length > 0) {
+        console.warn("Capacity violations detected:", violations);
+      }
 
       return {
         version: 1,
@@ -759,182 +817,324 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     participants: 16,
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
+      // --- Winners Bracket (WB) ---
+      const wbR16 = Array.from({ length: 8 }, (_, i) =>
+        createMatchNode(`wb-r16-${i + 1}`, 2, 0, 0, `Ganadora R16 ${i + 1}`)
+      );
+      const wbQF = Array.from({ length: 4 }, (_, i) =>
+        createMatchNode(`wb-qf-${i + 1}`, 2, 0, 0, `Ganadora QF ${i + 1}`)
+      );
+      const wbSF = Array.from({ length: 2 }, (_, i) =>
+        createMatchNode(`wb-sf-${i + 1}`, 2, 0, 0, `Ganadora SF ${i + 1}`)
+      );
+      const wbFinal = createMatchNode(`wb-final`, 2, 0, 0, `Ganadora Final`);
+
+      // --- Lower Bracket (LB) ---
+      // R1: perdedores de WB R16 emparejados: (1,2)->lb-r1-1; (3,4)->lb-r1-2; (5,6)->lb-r1-3; (7,8)->lb-r1-4
+      const lbR1 = Array.from({ length: 4 }, (_, i) =>
+        createMatchNode(`lb-r1-${i + 1}`, 2, 0, 0, `Perdedora R1-${i + 1}`)
+      );
+      // R2: winner lbR1-X vs loser wbQF-X
+      const lbR2 = Array.from({ length: 4 }, (_, i) =>
+        createMatchNode(`lb-r2-${i + 1}`, 2, 0, 0, `Perdedora R2-${i + 1}`)
+      );
+      // R3: winners de lbR2 emparejados: (1,2)->lb-r3-1; (3,4)->lb-r3-2
+      const lbR3 = Array.from({ length: 2 }, (_, i) =>
+        createMatchNode(`lb-r3-${i + 1}`, 2, 0, 0, `Perdedora R3-${i + 1}`)
+      );
+      // R4: winner lbR3-1 vs loser wbSF-1; winner lbR3-2 vs loser wbSF-2
+      const lbR4 = Array.from({ length: 2 }, (_, i) =>
+        createMatchNode(`lb-r4-${i + 1}`, 2, 0, 0, `Perdedora R4-${i + 1}`)
+      );
+      const lbSF = createMatchNode(`lb-sf`, 2, 0, 0, `Perdedora SF`);
+      const lbFinal = createMatchNode(`lb-final`, 2, 0, 0, `Perdedora Final`);
+
+      // --- Grand Final & sinks ---
+      const grandFinal = createMatchNode(
+        `grand-final`,
+        2,
+        0,
+        0,
+        `Final del Torneo`
+      );
+      const podium = createPodiumNode(`podium`, 3, 0, 0);
+      const eliminacion = createSingleEliminationNode(0, 0);
+
       const nodes = [
-        // Llave ganadora (izquierda) - 16 equipos
-        ...Array.from({ length: 8 }, (_, i) =>
-          createMatchNode(
-            `ganadora-${i + 1}`,
-            2,
-            50,
-            30 + i * 60,
-            `Ganadora ${i + 1}`
-          )
-        ),
-        ...Array.from({ length: 4 }, (_, i) =>
-          createMatchNode(
-            `ganadora-semi-${i + 1}`,
-            2,
-            200,
-            60 + i * 150,
-            `Ganadora Semi ${i + 1}`
-          )
-        ),
-        createMatchNode("ganadora-final", 2, 350, 300, "Ganadora Final"),
-
-        // Llave perdedora (centro) - 16 equipos
-        ...Array.from({ length: 8 }, (_, i) =>
-          createMatchNode(
-            `perdedora-${i + 1}`,
-            2,
-            500,
-            30 + i * 60,
-            `Perdedora ${i + 1}`
-          )
-        ),
-        ...Array.from({ length: 4 }, (_, i) =>
-          createMatchNode(
-            `perdedora-semi-${i + 1}`,
-            2,
-            650,
-            60 + i * 150,
-            `Perdedora Semi ${i + 1}`
-          )
-        ),
-        createMatchNode("perdedora-final", 2, 800, 300, "Perdedora Final"),
-
-        // Final del torneo (centro-derecha)
-        createMatchNode("final-torneo", 2, 950, 300, "Final del Torneo"),
-
-        // Podio y eliminación (extrema derecha)
-        createPodiumNode("podium", 3, 1200, 300),
-        createSingleEliminationNode(1200, 500),
+        ...wbR16,
+        ...wbQF,
+        ...wbSF,
+        wbFinal,
+        ...lbR1,
+        ...lbR2,
+        ...lbR3,
+        ...lbR4,
+        lbSF,
+        lbFinal,
+        grandFinal,
+        podium,
+        eliminacion,
       ];
 
-      const edges = [
-        // Llave ganadora (ganadores)
-        ...Array.from({ length: 8 }, (_, i) =>
+      const edges: ReturnType<typeof createEdge>[] = [];
+
+      // --- WB: R16 -> QF (ganadores) y perdedores bajan a LB R1 emparejados ---
+      for (let i = 1; i <= 8; i++) {
+        const qfIdx = Math.ceil(i / 2); // (1,2)->1 ; (3,4)->2 ; ...
+        edges.push(
           createEdge(
-            `edge-g${i + 1}`,
-            `ganadora-${i + 1}`,
-            `ganadora-semi-${Math.floor(i / 2) + 1}`,
+            `e-wb-r16-${i}-to-wb-qf-${qfIdx}`,
+            `wb-r16-${i}`,
+            `wb-qf-${qfIdx}`,
             "Ganador",
             false
           )
-        ),
-        ...Array.from({ length: 4 }, (_, i) =>
+        );
+        const lbR1Idx = qfIdx; // mismo pairing
+        edges.push(
           createEdge(
-            `edge-gs${i + 1}`,
-            `ganadora-semi-${i + 1}`,
-            "ganadora-final",
+            `e-wb-r16-${i}-to-lb-r1-${lbR1Idx}`,
+            `wb-r16-${i}`,
+            `lb-r1-${lbR1Idx}`,
+            "Perdedor",
+            true
+          )
+        );
+      }
+
+      // --- WB: QF -> SF (ganadores) y perdedores bajan a LB R2 correspondiente ---
+      for (let j = 1; j <= 4; j++) {
+        const sfIdx = Math.ceil(j / 2); // (1,2)->1 ; (3,4)->2
+        edges.push(
+          createEdge(
+            `e-wb-qf-${j}-to-wb-sf-${sfIdx}`,
+            `wb-qf-${j}`,
+            `wb-sf-${sfIdx}`,
             "Ganador",
             false
           )
-        ),
-
-        // Llave ganadora (perdedores van a eliminación)
-        ...Array.from({ length: 8 }, (_, i) =>
+        );
+        edges.push(
           createEdge(
-            `edge-g${i + 1}-elim`,
-            `ganadora-${i + 1}`,
-            "eliminacion",
+            `e-wb-qf-${j}-to-lb-r2-${j}`,
+            `wb-qf-${j}`,
+            `lb-r2-${j}`,
             "Perdedor",
             true
           )
-        ),
-        ...Array.from({ length: 4 }, (_, i) =>
-          createEdge(
-            `edge-gs${i + 1}-elim`,
-            `ganadora-semi-${i + 1}`,
-            "eliminacion",
-            "Perdedor",
-            true
-          )
-        ),
+        );
+      }
 
-        // Llave perdedora (ganadores)
-        ...Array.from({ length: 8 }, (_, i) =>
+      // --- WB: SF -> WB Final (ganadores) y perdedores bajan a LB R4 correspondiente ---
+      for (let k = 1; k <= 2; k++) {
+        edges.push(
           createEdge(
-            `edge-p${i + 1}`,
-            `perdedora-${i + 1}`,
-            `perdedora-semi-${Math.floor(i / 2) + 1}`,
+            `e-wb-sf-${k}-to-wb-final`,
+            `wb-sf-${k}`,
+            `wb-final`,
             "Ganador",
             false
           )
-        ),
-        ...Array.from({ length: 4 }, (_, i) =>
+        );
+        edges.push(
           createEdge(
-            `edge-ps${i + 1}`,
-            `perdedora-semi-${i + 1}`,
-            "perdedora-final",
+            `e-wb-sf-${k}-to-lb-r4-${k}`,
+            `wb-sf-${k}`,
+            `lb-r4-${k}`,
+            "Perdedor",
+            true
+          )
+        );
+      }
+
+      // --- LB Progressión ---
+      // LB R1 winners -> LB R2 (mismo índice)
+      for (let i = 1; i <= 4; i++) {
+        edges.push(
+          createEdge(
+            `e-lb-r1-${i}-to-lb-r2-${i}`,
+            `lb-r1-${i}`,
+            `lb-r2-${i}`,
             "Ganador",
             false
           )
-        ),
-
-        // Llave perdedora (perdedores van a eliminación)
-        ...Array.from({ length: 8 }, (_, i) =>
+        );
+        edges.push(
           createEdge(
-            `edge-p${i + 1}-elim`,
-            `perdedora-${i + 1}`,
-            "eliminacion",
+            `e-lb-r1-${i}-elim`,
+            `lb-r1-${i}`,
+            `eliminacion`,
             "Perdedor",
             true
           )
-        ),
-        ...Array.from({ length: 4 }, (_, i) =>
-          createEdge(
-            `edge-ps${i + 1}-elim`,
-            `perdedora-semi-${i + 1}`,
-            "eliminacion",
-            "Perdedor",
-            true
-          )
-        ),
+        );
+      }
 
-        // Conexiones entre llaves
+      // LB R2 winners -> LB R3 emparejados (1,2)->r3-1 ; (3,4)->r3-2); perdedores a eliminación
+      edges.push(
         createEdge(
-          "edge-gf",
-          "ganadora-final",
-          "final-torneo",
+          `e-lb-r2-1-to-lb-r3-1`,
+          `lb-r2-1`,
+          `lb-r3-1`,
           "Ganador",
           false
-        ),
+        )
+      );
+      edges.push(
         createEdge(
-          "edge-pf",
-          "perdedora-final",
-          "final-torneo",
+          `e-lb-r2-2-to-lb-r3-1`,
+          `lb-r2-2`,
+          `lb-r3-1`,
           "Ganador",
           false
-        ),
-
-        // Final → Podio (1er lugar)
+        )
+      );
+      edges.push(
         createEdge(
-          "edge-ft-1",
-          "final-torneo",
-          "podium",
+          `e-lb-r2-3-to-lb-r3-2`,
+          `lb-r2-3`,
+          `lb-r3-2`,
           "Ganador",
-          false,
-          "sink-podium-0"
-        ),
-        // Ganadora Final → Podio (2do lugar)
+          false
+        )
+      );
+      edges.push(
         createEdge(
-          "edge-ft-2",
-          "ganadora-final",
-          "podium",
+          `e-lb-r2-4-to-lb-r3-2`,
+          `lb-r2-4`,
+          `lb-r3-2`,
+          "Ganador",
+          false
+        )
+      );
+      for (let i = 1; i <= 4; i++) {
+        edges.push(
+          createEdge(
+            `e-lb-r2-${i}-elim`,
+            `lb-r2-${i}`,
+            `eliminacion`,
+            "Perdedor",
+            true
+          )
+        );
+      }
+
+      // LB R3 winners -> LB R4 correspondiente; perdedores a eliminación
+      edges.push(
+        createEdge(
+          `e-lb-r3-1-to-lb-r4-1`,
+          `lb-r3-1`,
+          `lb-r4-1`,
+          "Ganador",
+          false
+        )
+      );
+      edges.push(
+        createEdge(
+          `e-lb-r3-2-to-lb-r4-2`,
+          `lb-r3-2`,
+          `lb-r4-2`,
+          "Ganador",
+          false
+        )
+      );
+      edges.push(
+        createEdge(`e-lb-r3-1-elim`, `lb-r3-1`, `eliminacion`, "Perdedor", true)
+      );
+      edges.push(
+        createEdge(`e-lb-r3-2-elim`, `lb-r3-2`, `eliminacion`, "Perdedor", true)
+      );
+
+      // LB R4: ya reciben además los perdedores de WB SF (arriba). Winners -> LB SF; perdedores a eliminación
+      edges.push(
+        createEdge(`e-lb-r4-1-to-lb-sf`, `lb-r4-1`, `lb-sf`, "Ganador", false)
+      );
+      edges.push(
+        createEdge(`e-lb-r4-2-to-lb-sf`, `lb-r4-2`, `lb-sf`, "Ganador", false)
+      );
+      edges.push(
+        createEdge(`e-lb-r4-1-elim`, `lb-r4-1`, `eliminacion`, "Perdedor", true)
+      );
+      edges.push(
+        createEdge(`e-lb-r4-2-elim`, `lb-r4-2`, `eliminacion`, "Perdedor", true)
+      );
+
+      // LB SF: winner -> LB Final ; loser -> eliminación
+      edges.push(
+        createEdge(`e-lb-sf-to-lb-final`, `lb-sf`, `lb-final`, "Ganador", false)
+      );
+      edges.push(
+        createEdge(`e-lb-sf-elim`, `lb-sf`, `eliminacion`, "Perdedor", true)
+      );
+
+      // WB Final: winner -> Grand Final ; loser -> LB Final
+      edges.push(
+        createEdge(
+          `e-wb-final-to-grand-final`,
+          `wb-final`,
+          `grand-final`,
+          "Ganador",
+          false
+        )
+      );
+      edges.push(
+        createEdge(
+          `e-wb-final-to-lb-final`,
+          `wb-final`,
+          `lb-final`,
           "Perdedor",
-          true,
-          "sink-podium-1"
-        ),
-        // Perdedora Final → Podio (3er lugar)
+          true
+        )
+      );
+
+      // LB Final: winner -> Grand Final ; loser -> Podio 3
+      edges.push(
         createEdge(
-          "edge-ft-3",
-          "perdedora-final",
-          "podium",
+          `e-lb-final-to-grand-final`,
+          `lb-final`,
+          `grand-final`,
+          "Ganador",
+          false
+        )
+      );
+      edges.push(
+        createEdge(
+          `e-lb-final-to-podium-3`,
+          `lb-final`,
+          `podium`,
           "Perdedor",
           true,
           "sink-podium-2"
-        ),
-      ];
+        )
+      );
+
+      // Grand Final -> Podio (1° ganador, 2° perdedor)
+      edges.push(
+        createEdge(
+          `e-gf-to-podium-1`,
+          `grand-final`,
+          `podium`,
+          "Ganador",
+          false,
+          "sink-podium-0"
+        )
+      );
+      edges.push(
+        createEdge(
+          `e-gf-to-podium-2`,
+          `grand-final`,
+          `podium`,
+          "Perdedor",
+          true,
+          "sink-podium-1"
+        )
+      );
+
+      // Validar capacity antes de retornar
+      const violations = validateInboundCapacity(nodes, edges);
+      if (violations.length > 0) {
+        console.warn("Capacity violations detected:", violations);
+      }
 
       return {
         version: 1,
