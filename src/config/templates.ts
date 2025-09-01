@@ -49,7 +49,6 @@ function createEliminationNode(
   return {
     id,
     type: "sink" as const,
-    capacity: 0,
     slots: [] as {
       index: number;
       participantId?: string;
@@ -76,7 +75,6 @@ function createPodiumNode(id: string, places: number, x: number, y: number) {
   return {
     id,
     type: "sink" as const,
-    capacity: 0,
     slots: [] as {
       index: number;
       participantId?: string;

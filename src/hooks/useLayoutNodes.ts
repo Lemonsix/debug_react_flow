@@ -49,7 +49,7 @@ export const getLayoutedNodes = async (nodes: GraphNode[], edges: Edge[]) => {
         ports.push({ id: n.id });
 
         // Agregar ports para los handles de entrada/salida
-        for (let i = 0; i < n.capacity; i++) {
+        for (let i = 0; i < (n.capacity || 0); i++) {
           ports.push({
             id: `match-${n.id}-${i}`,
             properties: {

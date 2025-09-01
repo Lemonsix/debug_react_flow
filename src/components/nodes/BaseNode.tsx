@@ -65,7 +65,7 @@ export function useBaseNode({
     formData.type === "match"
       ? validateNodeForm(
           formData.type,
-          formData.capacity,
+          formData.capacity || 0,
           undefined, // No hay sinkConfig
           formData.type === "match"
             ? (formData.config as import("../../types").MatchConfiguration)
@@ -80,8 +80,8 @@ export function useBaseNode({
     if (formData.type === "match") {
       return validateMatchForEsport(
         esport,
-        formData.capacity,
-        formData.capacity
+        formData.capacity || 0,
+        formData.capacity || 0
       );
     }
     return { isValid: true, errors: [] };
@@ -114,13 +114,16 @@ export function useBaseNode({
     if (onChange) {
       const updates: Partial<GraphNode> = {
         type: formData.type,
-        capacity: formData.capacity,
       };
 
+      // Solo incluir capacity para nodos match
       if (formData.type === "match") {
-        updates.config = formData.config;
+        updates.capacity = formData.capacity || 0;
+        updates.config =
+          formData.config as import("../../types").MatchConfiguration;
       } else if (data.type === "sink") {
-        updates.config = formData.config;
+        updates.config =
+          formData.config as import("../../types").SinkConfiguration;
       }
 
       onChange(updates);
@@ -137,7 +140,7 @@ export function useBaseNode({
         data.config ||
         (data.type === "match"
           ? {
-              capacity: data.capacity,
+              capacity: data.capacity || 0,
               modalidad: "presencial" as const,
               scheduledDate: undefined,
               scheduledTime: undefined,

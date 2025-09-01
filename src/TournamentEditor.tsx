@@ -793,7 +793,6 @@ function TournamentEditorInternal({
       const podiumNode: GraphNode = {
         id: podiumId,
         type: "sink",
-        capacity: 0,
         slots: [],
         editable: false, // Podio NO inicia en estado de edición
         position: { x: 800, y: 150 },
@@ -818,7 +817,6 @@ function TournamentEditorInternal({
       const disqualificationNode: GraphNode = {
         id: disqualificationId,
         type: "sink",
-        capacity: 0,
         slots: [],
         editable: false, // Eliminación NO inicia en estado de edición
         position: { x: 800, y: 300 },
@@ -1077,7 +1075,8 @@ function TournamentEditorInternal({
       const newNode: GraphNode = {
         id: newId,
         type: nodeType,
-        capacity: nodeType === "sink" ? 0 : 2,
+        // Solo asignar capacity para nodos match
+        ...(nodeType === "match" && { capacity: 2 }),
         slots:
           nodeType === "sink"
             ? []
@@ -1792,15 +1791,12 @@ function TournamentEditorInternal({
   const exportConfiguration = useCallback(() => {
     // Construir solo los datos esenciales del torneo (nodos y edges)
     const tournamentData: TournamentData = {
-      nodes: nodes.map((n) => ({
-        ...(n.data as GraphNode),
-        position: n.position,
-        // Asegurar que la configuración de match se incluya
-        ...((n.data as GraphNode).type === "match" &&
-          (n.data as GraphNode).config && {
-            config: (n.data as GraphNode).config,
-          }),
-      })),
+      nodes: nodes.map((n) => {
+        const nodeData = n.data as GraphNode;
+        // Solo incluir datos esenciales del torneo, excluir propiedades del sistema
+        const { position, editable, ...essentialData } = nodeData;
+        return essentialData;
+      }),
       edges: edges.map((e) => ({
         ...(e.data as GraphEdge),
       })),

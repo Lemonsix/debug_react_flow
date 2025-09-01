@@ -85,7 +85,8 @@ export type NodeConfiguration =
 export type GraphNode = {
   id: string;
   type: NodeType;
-  capacity: number;
+  // capacity solo para nodos match, no para sinks
+  capacity?: number;
   slots: Array<{
     index: number;
     participantId?: string;
