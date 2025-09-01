@@ -4,7 +4,7 @@ export type TournamentTemplate = {
   id: string;
   name: string;
   description: string;
-  category: "eliminacion" | "suizo" | "eliminacion-doble";
+  category: "eliminacion" | "eliminacion-doble";
   participants: number;
   esports: EsportType[];
   generateGraph: (esport: EsportType) => TournamentGraph;
@@ -462,118 +462,6 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     },
   },
 
-  // SISTEMA SUIZO
-  {
-    id: "suizo-16",
-    name: "Sistema Suizo - 16 Equipos",
-    description:
-      "Torneo con sistema suizo para 16 equipos con podio de 3 posiciones",
-    category: "suizo",
-    participants: 16,
-    esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
-    generateGraph: (esport: EsportType) => {
-      const nodes = [
-        // Rondas del sistema suizo
-        ...Array.from({ length: 4 }, (_, round) =>
-          createMatchNode(
-            `ronda-${round + 1}`,
-            2,
-            150 + round * 120,
-            200,
-            `Ronda ${round + 1}`
-          )
-        ),
-        // Final
-        createMatchNode("final", 2, 650, 200, "Final"),
-        // Podio único con 3 posiciones
-        createPodiumNode("podium", 3, 800, 200),
-        // Matches de consolación para equipos con mismo score
-        ...Array.from({ length: 3 }, (_, i) =>
-          createMatchNode(
-            `consolacion-${i + 1}`,
-            2,
-            150 + i * 120,
-            400,
-            `Consolación ${i + 1}`
-          )
-        ),
-        // Nodo único de eliminación para todos los perdedores
-        createSingleEliminationNode(650, 400),
-      ];
-
-      const edges = [
-        // Rondas → Final (ganadores) - Edges default
-        ...Array.from({ length: 4 }, (_, round) =>
-          createEdge(
-            `edge-ronda-${round + 1}`,
-            `ronda-${round + 1}`,
-            "final",
-            "Ganador",
-            true
-          )
-        ),
-        // Final → Podio (1er lugar) - Edge NO default
-        createEdge("edge-final-1", "final", "podium", "Ganador", false),
-        // Rondas → Matches de consolación (perdedores)
-        ...Array.from({ length: 4 }, (_, round) =>
-          createEdge(
-            `edge-ronda-${round + 1}-consolacion`,
-            `ronda-${round + 1}`,
-            `consolacion-${Math.min(round + 1, 3)}`,
-            "Perdedor",
-            true
-          )
-        ),
-        // Todos los perdedores van al mismo nodo de eliminación
-        createEdge(
-          "edge-final-eliminacion",
-          "final",
-          "eliminacion",
-          "Perdedor",
-          true
-        ),
-        // Consolación → Eliminación (perdedores)
-        ...Array.from({ length: 3 }, (_, i) =>
-          createEdge(
-            `edge-consolacion-${i + 1}-eliminacion`,
-            `consolacion-${i + 1}`,
-            "eliminacion",
-            "Perdedor",
-            true
-          )
-        ),
-        // Perdedores → Podio (2do y 3er lugar)
-        createEdge(
-          "edge-eliminacion-final-podio",
-          "eliminacion",
-          "podium",
-          "2do Lugar"
-        ),
-        createEdge(
-          "edge-eliminacion-consolacion-1-podio",
-          "eliminacion",
-          "podium",
-          "3er Lugar"
-        ),
-      ];
-
-      return {
-        version: 1,
-        tournamentId: `template-suizo-16-${Date.now()}`,
-        esport,
-        nodes,
-        edges,
-        editable: true,
-        metadata: {
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-          author: "Template System",
-          description: "Sistema Suizo - 16 Equipos",
-        },
-      };
-    },
-  },
-
   // ELIMINACIÓN DOBLE
   {
     id: "eliminacion-doble-8",
@@ -608,45 +496,230 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
 
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 900, 200),
+        // Nodo de eliminación para perdedores
+        createSingleEliminationNode(100, 450),
       ];
 
       const edges = [
-        // Llave ganadora
-        createEdge("edge-g1", "ganadora-1", "ganadora-semi-1", "Ganador"),
-        createEdge("edge-g2", "ganadora-2", "ganadora-semi-1", "Ganador"),
-        createEdge("edge-g3", "ganadora-3", "ganadora-semi-2", "Ganador"),
-        createEdge("edge-g4", "ganadora-4", "ganadora-semi-2", "Ganador"),
-        createEdge("edge-gs1", "ganadora-semi-1", "ganadora-final", "Ganador"),
-        createEdge("edge-gs2", "ganadora-semi-2", "ganadora-final", "Ganador"),
+        // Llave ganadora (ganadores)
+        createEdge(
+          "edge-g1",
+          "ganadora-1",
+          "ganadora-semi-1",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-g2",
+          "ganadora-2",
+          "ganadora-semi-1",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-g3",
+          "ganadora-3",
+          "ganadora-semi-2",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-g4",
+          "ganadora-4",
+          "ganadora-semi-2",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-gs1",
+          "ganadora-semi-1",
+          "ganadora-final",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-gs2",
+          "ganadora-semi-2",
+          "ganadora-final",
+          "Ganador",
+          false
+        ),
 
-        // Llave perdedora
-        createEdge("edge-p1", "perdedora-1", "perdedora-semi-1", "Ganador"),
-        createEdge("edge-p2", "perdedora-2", "perdedora-semi-1", "Ganador"),
-        createEdge("edge-p3", "perdedora-3", "perdedora-semi-2", "Ganador"),
-        createEdge("edge-p4", "perdedora-4", "perdedora-semi-2", "Ganador"),
+        // Llave ganadora (perdedores van a eliminación)
+        createEdge(
+          "edge-g1-elim",
+          "ganadora-1",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-g2-elim",
+          "ganadora-2",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-g3-elim",
+          "ganadora-3",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-g4-elim",
+          "ganadora-4",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-gs1-elim",
+          "ganadora-semi-1",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-gs2-elim",
+          "ganadora-semi-2",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+
+        // Llave perdedora (ganadores)
+        createEdge(
+          "edge-p1",
+          "perdedora-1",
+          "perdedora-semi-1",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-p2",
+          "perdedora-2",
+          "perdedora-semi-1",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-p3",
+          "perdedora-3",
+          "perdedora-semi-2",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-p4",
+          "perdedora-4",
+          "perdedora-semi-2",
+          "Ganador",
+          false
+        ),
         createEdge(
           "edge-ps1",
           "perdedora-semi-1",
           "perdedora-final",
-          "Ganador"
+          "Ganador",
+          false
         ),
         createEdge(
           "edge-ps2",
           "perdedora-semi-2",
           "perdedora-final",
-          "Ganador"
+          "Ganador",
+          false
+        ),
+
+        // Llave perdedora (perdedores van a eliminación)
+        createEdge(
+          "edge-p1-elim",
+          "perdedora-1",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-p2-elim",
+          "perdedora-2",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-p3-elim",
+          "perdedora-3",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-p4-elim",
+          "perdedora-4",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-ps1-elim",
+          "perdedora-semi-1",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-ps2-elim",
+          "perdedora-semi-2",
+          "eliminacion",
+          "Perdedor",
+          true
         ),
 
         // Conexiones entre llaves
-        createEdge("edge-gf", "ganadora-final", "final-torneo", "Ganador"),
-        createEdge("edge-pf", "perdedora-final", "final-torneo", "Ganador"),
+        createEdge(
+          "edge-gf",
+          "ganadora-final",
+          "final-torneo",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-pf",
+          "perdedora-final",
+          "final-torneo",
+          "Ganador",
+          false
+        ),
 
         // Final → Podio (1er lugar)
-        createEdge("edge-ft-1", "final-torneo", "podium", "Ganador"),
+        createEdge(
+          "edge-ft-1",
+          "final-torneo",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-0"
+        ),
         // Ganadora Final → Podio (2do lugar)
-        createEdge("edge-ft-2", "ganadora-final", "podium", "Perdedor"),
+        createEdge(
+          "edge-ft-2",
+          "ganadora-final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-1"
+        ),
         // Perdedora Final → Podio (3er lugar)
-        createEdge("edge-ft-3", "perdedora-final", "podium", "Perdedor"),
+        createEdge(
+          "edge-ft-3",
+          "perdedora-final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-2"
+        ),
       ];
 
       return {
@@ -723,16 +796,19 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
 
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 900, 220),
+        // Nodo de eliminación para perdedores
+        createSingleEliminationNode(100, 500),
       ];
 
       const edges = [
-        // Llave ganadora
+        // Llave ganadora (ganadores)
         ...Array.from({ length: 8 }, (_, i) =>
           createEdge(
             `edge-g${i + 1}`,
             `ganadora-${i + 1}`,
             `ganadora-semi-${Math.floor(i / 2) + 1}`,
-            "Ganador"
+            "Ganador",
+            false
           )
         ),
         ...Array.from({ length: 4 }, (_, i) =>
@@ -740,17 +816,39 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
             `edge-gs${i + 1}`,
             `ganadora-semi-${i + 1}`,
             "ganadora-final",
-            "Ganador"
+            "Ganador",
+            false
           )
         ),
 
-        // Llave perdedora
+        // Llave ganadora (perdedores van a eliminación)
+        ...Array.from({ length: 8 }, (_, i) =>
+          createEdge(
+            `edge-g${i + 1}-elim`,
+            `ganadora-${i + 1}`,
+            "eliminacion",
+            "Perdedor",
+            true
+          )
+        ),
+        ...Array.from({ length: 4 }, (_, i) =>
+          createEdge(
+            `edge-gs${i + 1}-elim`,
+            `ganadora-semi-${i + 1}`,
+            "eliminacion",
+            "Perdedor",
+            true
+          )
+        ),
+
+        // Llave perdedora (ganadores)
         ...Array.from({ length: 8 }, (_, i) =>
           createEdge(
             `edge-p${i + 1}`,
             `perdedora-${i + 1}`,
             `perdedora-semi-${Math.floor(i / 2) + 1}`,
-            "Ganador"
+            "Ganador",
+            false
           )
         ),
         ...Array.from({ length: 4 }, (_, i) =>
@@ -758,20 +856,74 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
             `edge-ps${i + 1}`,
             `perdedora-semi-${i + 1}`,
             "perdedora-final",
-            "Ganador"
+            "Ganador",
+            false
+          )
+        ),
+
+        // Llave perdedora (perdedores van a eliminación)
+        ...Array.from({ length: 8 }, (_, i) =>
+          createEdge(
+            `edge-p${i + 1}-elim`,
+            `perdedora-${i + 1}`,
+            "eliminacion",
+            "Perdedor",
+            true
+          )
+        ),
+        ...Array.from({ length: 4 }, (_, i) =>
+          createEdge(
+            `edge-ps${i + 1}-elim`,
+            `perdedora-semi-${i + 1}`,
+            "eliminacion",
+            "Perdedor",
+            true
           )
         ),
 
         // Conexiones entre llaves
-        createEdge("edge-gf", "ganadora-final", "final-torneo", "Ganador"),
-        createEdge("edge-pf", "perdedora-final", "final-torneo", "Ganador"),
+        createEdge(
+          "edge-gf",
+          "ganadora-final",
+          "final-torneo",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-pf",
+          "perdedora-final",
+          "final-torneo",
+          "Ganador",
+          false
+        ),
 
         // Final → Podio (1er lugar)
-        createEdge("edge-ft-1", "final-torneo", "podium", "Ganador"),
+        createEdge(
+          "edge-ft-1",
+          "final-torneo",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-0"
+        ),
         // Ganadora Final → Podio (2do lugar)
-        createEdge("edge-ft-2", "ganadora-final", "podium", "Perdedor"),
+        createEdge(
+          "edge-ft-2",
+          "ganadora-final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-1"
+        ),
         // Perdedora Final → Podio (3er lugar)
-        createEdge("edge-ft-3", "perdedora-final", "podium", "Perdedor"),
+        createEdge(
+          "edge-ft-3",
+          "perdedora-final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-2"
+        ),
       ];
 
       return {
