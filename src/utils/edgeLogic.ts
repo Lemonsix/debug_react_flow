@@ -201,3 +201,45 @@ export function validateDefaultEdges(edges: Edge[]): Edge[] {
 
   return edges;
 }
+
+/**
+ * Asegura que los edges conectados al sink de eliminación siempre tengan el estado correcto
+ * Los edges que van a eliminación deben ser siempre "default" (Derrota)
+ */
+export function validateEliminationEdges(
+  edges: Edge[],
+  nodes: GraphNode[]
+): Edge[] {
+  return edges.map((edge) => {
+    const edgeData = edge.data as GraphEdge;
+    const targetNode = nodes.find((n) => n.id === edge.target);
+
+    // Si el edge va a un sink de eliminación, debe ser default
+    if (
+      targetNode &&
+      targetNode.type === "sink" &&
+      targetNode.config &&
+      isSinkConfiguration(targetNode.config) &&
+      targetNode.config.sinkType === "eliminacion"
+    ) {
+      // Asegurar que el edge sea default y tenga la condición correcta
+      if (!edgeData.isDefault || edgeData.condition?.field !== "default") {
+        return {
+          ...edge,
+          data: {
+            ...edgeData,
+            isDefault: true,
+            condition: {
+              field: "default" as const,
+              operator: ">=" as const,
+              value: 0,
+            },
+            outcome: "default",
+          },
+        };
+      }
+    }
+
+    return edge;
+  });
+}

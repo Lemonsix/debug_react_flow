@@ -38,11 +38,28 @@ export type MatchConfiguration = {
 // Nuevos tipos para funcionalidades de edición
 export type ConditionOperator = ">=" | "<=" | "==" | "!=" | ">" | "<";
 
-export type EdgeCondition = {
+export type DefaultCondition = {
+  field: "default";
+  operator: ">=";
+  value: 0;
+};
+
+export type ScoreCondition = {
+  field: "score";
   operator: ConditionOperator;
   value: number;
-  field: "position" | "score" | "default";
 };
+
+export type PositionCondition = {
+  field: "position";
+  operator: ConditionOperator;
+  value: number;
+};
+
+export type EdgeCondition =
+  | DefaultCondition
+  | ScoreCondition
+  | PositionCondition;
 
 export type SinkType = "podium" | "eliminacion";
 

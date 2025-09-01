@@ -9,6 +9,9 @@ import {
 import type {
   GraphEdge,
   EdgeCondition,
+  DefaultCondition,
+  ScoreCondition,
+  PositionCondition,
   ConditionOperator,
   GraphNode,
   EsportType,
@@ -75,54 +78,73 @@ export default function EditableEdge({
     data: edgeData,
   } as Edge;
 
-  const switchLogic = getEdgeSwitchLogic(currentEdge, allEdges, targetNode);
-  const { isDefault, color } = switchLogic;
-  
-
-  
-  // Determinar si ya existe un edge default para este nodo
-  const hasDefaultEdge = useMemo(() => {
-    if (isDefault) return true; // Este edge es el default
-    // Verificar si ya existe otro edge default para el mismo nodo source
-    return allEdges.some(edge => 
-      edge.source === edgeData.fromNode && 
-      edge.id !== id && 
-      (edge.data as GraphEdge)?.isDefault === true
-    );
-  }, [isDefault, allEdges, edgeData.fromNode, id]);
+  // 1) Memo para switch logic estable
+  const { isDefault, color } = useMemo(() => {
+    return getEdgeSwitchLogic(currentEdge, allEdges, targetNode);
+  }, [id, edgeData.fromNode, edgeData.toNode, edgeData, allEdges, targetNode]);
 
   const [condition, setCondition] = useState<EdgeCondition>(() => {
-    const initialCondition = edgeData?.condition || {
-      field: isDefault ? "default" : "score",
-      operator: isDefault ? ">=" : ">",
-      value: isDefault ? 0 : 0,
-    };
-    
-    return initialCondition;
+    // Usar la lógica de switch para determinar la condición inicial
+    if (isDefault) {
+      return { field: "default", operator: ">=", value: 0 } as DefaultCondition;
+    }
+    return (
+      edgeData?.condition ||
+      ({ field: "score", operator: ">", value: 0 } as ScoreCondition)
+    );
   });
+
+  // 2) effectiveCondition: única fuente de verdad para el render
+  const defaultCond = useMemo<EdgeCondition>(
+    () => ({ field: "default", operator: ">=", value: 0 }),
+    []
+  );
+
+  const effectiveCondition = useMemo<EdgeCondition>(() => {
+    if (isEditing) return condition; // mientras edito, muestro lo local
+    if (isDefault) return defaultCond; // si es default por lógica de switch
+    return (
+      edgeData?.condition ??
+      ({ field: "score", operator: ">", value: 0 } as ScoreCondition)
+    ); // fallback no default
+  }, [isEditing, condition, isDefault, edgeData?.condition, defaultCond]);
 
   // Sincronizar estado local cuando cambien los datos del parent
   useEffect(() => {
-    if (edgeData?.condition && !isEditing) {
-      setCondition(edgeData.condition);
+    if (!isEditing) {
+      setCondition(
+        edgeData?.condition ??
+          ({ field: "score", operator: ">", value: 0 } as ScoreCondition)
+      );
     }
-    // Removemos la lógica de reinicialización automática para evitar conflictos
-  }, [edgeData?.condition, isEditing, id, condition]);
+  }, [isEditing, edgeData?.condition]);
 
-  // Efecto para actualizar la condición cuando cambie la lógica de switch
+  // Efecto para sincronizar la condición con la lógica de switch
   useEffect(() => {
-    // Si no hay condición en edgeData y no estamos editando, actualizar según la lógica
-    if (!edgeData?.condition && !isEditing) {
+    // Si no estamos editando, sincronizar el estado local con la lógica de switch
+    if (!isEditing) {
       const shouldBeDefault = isDefault;
-      const newCondition: EdgeCondition = {
-        field: shouldBeDefault ? "default" : "score",
-        operator: shouldBeDefault ? ">=" : ">",
-        value: shouldBeDefault ? 0 : 0,
-      };
-      
-      setCondition(newCondition);
+      const currentField = condition.field;
+
+      // Si hay inconsistencia entre isDefault y condition.field, corregirla
+      if (shouldBeDefault && currentField !== "default") {
+        const newCondition: EdgeCondition = {
+          field: "default",
+          operator: ">=",
+          value: 0,
+        };
+        setCondition(newCondition);
+      } else if (!shouldBeDefault && currentField === "default") {
+        // Si no es default pero tiene field "default", cambiar a score
+        const newCondition: EdgeCondition = {
+          field: "score",
+          operator: ">",
+          value: 0,
+        };
+        setCondition(newCondition);
+      }
     }
-  }, [isDefault, isEditing, edgeData?.condition, id, condition]);
+  }, [isDefault, isEditing, id, condition.field]);
 
   // Efecto para sincronizar cuando edgeData cambie (por ejemplo, después de validateDefaultEdges)
   useEffect(() => {
@@ -132,7 +154,7 @@ export default function EditableEdge({
         setCondition(edgeData.condition);
       }
     }
-  }, [edgeData?.condition, isEditing, id, condition]);
+  }, [edgeData?.condition, isEditing, id]);
 
   // Calcular path del edge
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -145,24 +167,21 @@ export default function EditableEdge({
   });
 
   // Validación de la condición - "default" siempre es válido
-  const validation = useMemo(
-    () => {
-      if (condition.field === "default") {
-        return { isValid: true, errors: {} };
-      }
-      
-      // Para Fortnite, validar que el valor sea positivo
-      if (esport === "fortnite" && condition.value < 0) {
-        return { 
-          isValid: false, 
-          errors: { value: "El valor debe ser un número positivo" } 
-        };
-      }
-      
-      return validateEdgeCondition(condition);
-    },
-    [condition, esport]
-  );
+  const validation = useMemo(() => {
+    if (isDefault || condition.field === "default") {
+      return { isValid: true, errors: {} };
+    }
+
+    // Para Fortnite, validar que el valor sea positivo
+    if (esport === "fortnite" && condition.value < 0) {
+      return {
+        isValid: false,
+        errors: { value: "El valor debe ser un número positivo" },
+      };
+    }
+
+    return validateEdgeCondition(condition);
+  }, [condition, esport, isDefault]);
 
   // Manejar guardado de condición
   const handleSave = useCallback(() => {
@@ -172,125 +191,138 @@ export default function EditableEdge({
     }
 
     try {
+      // Asegurar que la condición sea consistente con la lógica de switch
+      const finalCondition = isDefault
+        ? ({
+            field: "default" as const,
+            operator: ">=" as const,
+            value: 0,
+          } as DefaultCondition)
+        : condition;
+
       // Actualizar el edge en el estado global
       if (onConditionUpdate && id) {
-        onConditionUpdate(id, condition);
+        onConditionUpdate(id, finalCondition);
       }
       // La edición se cierra automáticamente desde TournamentEditor
     } catch (error) {
       console.error("Error saving condition:", error);
     }
-  }, [condition, validation, onConditionUpdate, id]);
+  }, [condition, validation, onConditionUpdate, id, isDefault]);
 
   // Cancelar edición
   const handleCancel = useCallback(() => {
-    const cancelCondition = edgeData?.condition || {
-      field: isDefault ? "default" : (hasDefaultEdge ? "score" : "default"),
-      operator: isDefault ? ">=" : (hasDefaultEdge ? ">" : ">="),
-      value: isDefault ? 0 : (hasDefaultEdge ? 0 : 0),
-    };
-    
-    setCondition(cancelCondition);
+    // Usar la lógica de switch para determinar la condición correcta al cancelar
+    if (isDefault) {
+      setCondition({
+        field: "default",
+        operator: ">=",
+        value: 0,
+      } as DefaultCondition);
+    } else {
+      setCondition(
+        edgeData?.condition ||
+          ({ field: "score", operator: ">", value: 0 } as ScoreCondition)
+      );
+    }
     onStopEditing?.();
-  }, [edgeData?.condition, onStopEditing, isDefault, hasDefaultEdge, id]);
-
-
+  }, [edgeData?.condition, onStopEditing, isDefault, id]);
 
   // Generar label para mostrar la condición o "default"
   const getConditionLabel = () => {
-    // Usar el estado local actual en lugar de edgeData?.condition para evitar retrasos
-    const currentCondition = edgeData?.condition || condition;
-
-    // Si el campo es "default", mostrar "Derrota" para esports competitivos y Fortnite
-    if (currentCondition?.field === "default" || isDefault) {
-      if (esport !== "fortnite") {
-        return "Derrota";
-      }
+    if (isDefault || effectiveCondition.field === "default") {
       return "Derrota";
     }
 
-          // Para otros campos, mostrar la condición con theming del esport
-      if (currentCondition && (currentCondition.field as string) !== "default") {
-        const esportConfig = getEsportConfig(esport);
-        
-        // Si es un esport competitivo (cs2, valorant, etc.), usar labels específicos
-        if (esport !== "fortnite") {
-          // Para edges de ganador basados en score, usar BO1, BO3, BO5
-          if (currentCondition.field === "score" && currentCondition.operator === ">") {
-            if (currentCondition.value === 0) {
-              return "Ganador BO1";
-            } else if (currentCondition.value === 1) {
-              return "Ganador BO3"; // score > 1
-            } else if (currentCondition.value === 2) {
-              return "Ganador BO5"; // score > 2
-            }
+    // Para otros campos, mostrar la condición con theming del esport
+    if (
+      effectiveCondition.field === "score" ||
+      effectiveCondition.field === "position"
+    ) {
+      const esportConfig = getEsportConfig(esport);
+
+      // Si es un esport competitivo (cs2, valorant, etc.), usar labels específicos
+      if (esport !== "fortnite") {
+        // Para edges de ganador basados en score, usar BO1, BO3, BO5
+        if (
+          effectiveCondition.field === "score" &&
+          effectiveCondition.operator === ">"
+        ) {
+          if (effectiveCondition.value === 0) {
+            return "Ganador BO1";
+          } else if (effectiveCondition.value === 1) {
+            return "Ganador BO3"; // score > 1
+          } else if (effectiveCondition.value === 2) {
+            return "Ganador BO5"; // score > 2
           }
-          // Para otros casos, usar el label genérico del esport
-          return esportConfig.edgeLabels.winner;
+          // caso custom score -> "Ganador (custom)"
+          return "Ganador (custom)";
         }
-        
-        // Para Fortnite, generar labels descriptivos en lenguaje natural
-        if (esport === "fortnite") {
-          const { field, operator, value } = currentCondition;
-          
-          if (field === "position") {
-            switch (operator) {
-              case "<=":
-                return `Top ${value}`;
-              case "<":
-                return `Top ${value - 1}`;
-              case ">=":
-                return `Posición ${value} o mejor`;
-              case ">":
-                return `Posición ${value + 1} o mejor`;
-              case "==":
-                return `Posición ${value}`;
-              case "!=":
-                return `No posición ${value}`;
-              default:
-                return `Posición ${operator} ${value}`;
-            }
-          } else if (field === "score") {
-            switch (operator) {
-              case ">=":
-                return `Score ${value} o más`;
-              case ">":
-                return `Score ${value + 1} o más`;
-              case "<=":
-                return `Score ${value} o menos`;
-              case "<":
-                return `Score ${value - 1} o menos`;
-              case "==":
-                return `Score exacto ${value}`;
-              case "!=":
-                return `Score diferente de ${value}`;
-              default:
-                return `Score ${operator} ${value}`;
-            }
-          }
-        }
-        
-        return `${currentCondition.field} ${currentCondition.operator} ${currentCondition.value}`;
+        // Para otros casos, usar el label genérico del esport
+        return esportConfig.edgeLabels.winner;
       }
+
+      // Para Fortnite, generar labels descriptivos en lenguaje natural
+      if (esport === "fortnite") {
+        const { field, operator, value } = effectiveCondition;
+
+        if (field === "position") {
+          switch (operator) {
+            case "<=":
+              return `Top ${value}`;
+            case "<":
+              return `Top ${value - 1}`;
+            case ">=":
+              return `Posición ${value} o mejor`;
+            case ">":
+              return `Posición ${value + 1} o mejor`;
+            case "==":
+              return `Posición ${value}`;
+            case "!=":
+              return `No posición ${value}`;
+            default:
+              return `Posición ${operator} ${value}`;
+          }
+        } else if (field === "score") {
+          switch (operator) {
+            case ">=":
+              return `Score ${value} o más`;
+            case ">":
+              return `Score ${value + 1} o más`;
+            case "<=":
+              return `Score ${value} o menos`;
+            case "<":
+              return `Score ${value - 1} o menos`;
+            case "==":
+              return `Score exacto ${value}`;
+            case "!=":
+              return `Score diferente de ${value}`;
+            default:
+              return `Score ${operator} ${value}`;
+          }
+        }
+
+        // Si es score o position, mostrar la condición
+        if (effectiveCondition !== defaultCond) {
+          const condition = effectiveCondition as
+            | ScoreCondition
+            | PositionCondition;
+          return `${condition.field} ${condition.operator} ${condition.value}`;
+        }
+      }
+    }
+
+    // Si no es ninguno de los casos anteriores, usar el outcome del edge
     return edgeData?.outcome || "condition";
   };
 
   // Generar tooltip descriptivo en lenguaje natural para la condición
   const getConditionTooltip = () => {
-    const currentCondition = edgeData?.condition || condition;
-
-    if (currentCondition?.field === "default" || isDefault) {
-      if (esport !== "fortnite") {
-        return "Los equipos que pierdan el match seguirán este flujo hacia la derrota";
-      }
+    if (isDefault || effectiveCondition.field === "default") {
       return "Los equipos que pierdan el match seguirán este flujo hacia la derrota";
     }
 
-    if (!currentCondition) {
-      return "Condición del edge";
-    }
-
-    const { field, operator, value } = currentCondition;
+    const { field, operator, value } = effectiveCondition;
 
     // Mapear campos a lenguaje natural
     const fieldNames: Record<string, string> = {
@@ -322,15 +354,15 @@ export default function EditableEdge({
       }
     }
 
-          // Generar descripción contextual según el campo
-      switch (field) {
-        case "score":
-          return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán este camino`;
-        case "position":
-          return `Los participantes en ${fieldName} ${operatorName} ${value} continuarán por esta ruta`;
-        default:
-          return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán esta dirección`;
-      }
+    // Generar descripción contextual según el campo
+    switch (field) {
+      case "score":
+        return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán este camino`;
+      case "position":
+        return `Los participantes en ${fieldName} ${operatorName} ${value} continuarán por esta ruta`;
+      default:
+        return `Los participantes con ${fieldName} ${operatorName} ${value} seguirán esta dirección`;
+    }
   };
 
   return (
@@ -378,9 +410,7 @@ export default function EditableEdge({
                 <TooltipTrigger asChild>
                   <span
                     className={`text-xs font-medium cursor-help ${
-                      isDefault || condition.field === "default"
-                        ? "text-red-600"
-                        : "text-gray-700"
+                      isDefault ? "text-red-600" : "text-gray-700"
                     }`}
                   >
                     {getConditionLabel()}
@@ -402,7 +432,8 @@ export default function EditableEdge({
               {/* Para esports competitivos, mostrar selector de BO1/BO3/BO5 */}
               {esport !== "fortnite" ? (
                 <div className="mb-2">
-                  <Select onValueChange={(value) => {
+                  <Select
+                    onValueChange={(value) => {
                       if (value === "default") {
                         setCondition({
                           field: "default",
@@ -428,32 +459,42 @@ export default function EditableEdge({
                           value: 2,
                         });
                       }
-                    }} value={
-                      condition.field === "default" 
+                    }}
+                    value={
+                      isDefault || effectiveCondition.field === "default"
                         ? "default"
-                        : condition.field === "score" && condition.operator === ">" && condition.value === 0
+                        : effectiveCondition.field === "score" &&
+                          effectiveCondition.operator === ">" &&
+                          effectiveCondition.value === 0
                         ? "bo1"
-                        : condition.field === "score" && condition.operator === ">" && condition.value === 1
+                        : effectiveCondition.field === "score" &&
+                          effectiveCondition.operator === ">" &&
+                          effectiveCondition.value === 1
                         ? "bo3"
-                        : condition.field === "score" && condition.operator === ">" && condition.value === 2
+                        : effectiveCondition.field === "score" &&
+                          effectiveCondition.operator === ">" &&
+                          effectiveCondition.value === 2
                         ? "bo5"
-                        : "default"
-                    }>
+                        : "custom"
+                    }
+                  >
                     <SelectTrigger className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none min-w-fit">
                       <SelectValue placeholder="Derrota" />
                     </SelectTrigger>
-                    <SelectContent >
-                      <SelectItem value="default" >Derrota</SelectItem>
-                      <SelectItem value="bo1" >Ganador BO1</SelectItem>
+                    <SelectContent>
+                      <SelectItem value="default">Derrota</SelectItem>
+                      <SelectItem value="bo1">Ganador BO1</SelectItem>
                       <SelectItem value="bo3">Ganador BO3</SelectItem>
                       <SelectItem value="bo5">Ganador BO5</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               ) : (
                 // Para Fortnite, mostrar selector personalizado con campos configurables
                 <div className="mb-2 space-y-2">
-                  <Select onValueChange={(value) => {
+                  <Select
+                    onValueChange={(value) => {
                       if (value === "derrota") {
                         setCondition({
                           field: "default",
@@ -473,109 +514,156 @@ export default function EditableEdge({
                           value: 50, // Score mínimo por defecto
                         });
                       }
-                    }} value={
-                      condition.field === "default" 
-                        ? "derrota" 
-                        : condition.field === "position"
+                    }}
+                    value={
+                      isDefault || effectiveCondition.field === "default"
+                        ? "derrota"
+                        : effectiveCondition.field === "position"
                         ? "victoria-posicion"
-                        : condition.field === "score"
+                        : effectiveCondition.field === "score"
                         ? "victoria-score"
                         : "custom"
-                    }>
+                    }
+                  >
                     <SelectTrigger className="text-xs px-2 py-1 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-32">
                       <SelectValue placeholder="Derrota" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="derrota">Derrota</SelectItem>
-                      <SelectItem value="victoria-posicion">Victoria por Posición</SelectItem>
-                      <SelectItem value="victoria-score">Victoria por Score</SelectItem>
+                      <SelectItem value="victoria-posicion">
+                        Victoria por Posición
+                      </SelectItem>
+                      <SelectItem value="victoria-score">
+                        Victoria por Score
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
                   {/* Campos configurables para victoria en Fortnite - NO mostrar para Derrota */}
-                  {condition.field !== "default" && esport === "fortnite" && (
-                    <div className="flex gap-1">
-                      <Select onValueChange={(value) =>
-                          setCondition({
-                            ...condition,
-                            operator: value as ConditionOperator,
-                          })
-                        } value={condition.operator}>
-                        <SelectTrigger className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10">
-                          <SelectValue placeholder=">=" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value=">=">&ge;</SelectItem>
-                          <SelectItem value="<=">&le;</SelectItem>
-                          <SelectItem value="==">=</SelectItem>
-                          <SelectItem value="!=">≠</SelectItem>
-                          <SelectItem value=">">&gt;</SelectItem>
-                          <SelectItem value="<">&lt;</SelectItem>
-                        </SelectContent>
-                      </Select>
-
-                      <Input
-                        type="text"
-                        value={condition.value}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          // Permitir solo números positivos
-                          if (value === "" || /^\d+$/.test(value)) {
-                            setCondition({
-                              ...condition,
-                              value: value === "" ? 0 : Number(value),
-                            });
+                  {!isDefault &&
+                    effectiveCondition.field !== "default" &&
+                    esport === "fortnite" && (
+                      <div className="flex gap-1">
+                        <Select
+                          onValueChange={(value) => {
+                            if (
+                              condition.field === "score" ||
+                              condition.field === "position"
+                            ) {
+                              setCondition({
+                                ...condition,
+                                operator: value as ConditionOperator,
+                              } as ScoreCondition);
+                            }
+                          }}
+                          value={
+                            condition.field === "default"
+                              ? ">="
+                              : condition.operator
                           }
-                        }}
-                        className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
-                        placeholder="10"
-                      />
-                    </div>
-                  )}
+                        >
+                          <SelectTrigger className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10">
+                            <SelectValue placeholder=">=" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value=">=">&ge;</SelectItem>
+                            <SelectItem value="<=">&le;</SelectItem>
+                            <SelectItem value="==">=</SelectItem>
+                            <SelectItem value="!=">≠</SelectItem>
+                            <SelectItem value=">">&gt;</SelectItem>
+                            <SelectItem value="<">&lt;</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Input
+                          type="text"
+                          value={
+                            condition.field === "default" ? 0 : condition.value
+                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Permitir solo números positivos
+                            if (value === "" || /^\d+$/.test(value)) {
+                              if (
+                                condition.field === "score" ||
+                                condition.field === "position"
+                              ) {
+                                setCondition({
+                                  ...condition,
+                                  value: value === "" ? 0 : Number(value),
+                                } as ScoreCondition);
+                              }
+                            }
+                          }}
+                          className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
+                          placeholder="10"
+                        />
+                      </div>
+                    )}
                 </div>
               )}
 
               {/* Solo mostrar operador y valor si no es default Y es Fortnite */}
-              {/* DEBUG: condition.field = {condition.field}, isDefault = {isDefault}, hasDefaultEdge = {hasDefaultEdge} */}
-              {condition.field !== "default" && esport === "fortnite" && (
-                <>
-                  <Select onValueChange={(value) =>
-                      setCondition({
-                        ...condition,
-                        operator: value as ConditionOperator,
-                      })
-                    } value={condition.operator}>
-                    <SelectTrigger className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10">
-                      <SelectValue placeholder=">=" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value=">=">&ge;</SelectItem>
-                      <SelectItem value="<=">&le;</SelectItem>
-                      <SelectItem value="==">=</SelectItem>
-                      <SelectItem value="!=">≠</SelectItem>
-                      <SelectItem value=">">&gt;</SelectItem>
-                      <SelectItem value="<">&lt;</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Input
-                    type="text"
-                    value={condition.value}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // Permitir solo números (incluyendo negativos)
-                      if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
-                        setCondition({
-                          ...condition,
-                          value: value === "" ? 0 : Number(value),
-                        });
+              {!isDefault &&
+                effectiveCondition.field !== "default" &&
+                esport === "fortnite" && (
+                  <>
+                    <Select
+                      onValueChange={(value) => {
+                        if (
+                          condition.field === "score" ||
+                          condition.field === "position"
+                        ) {
+                          setCondition({
+                            ...condition,
+                            operator: value as ConditionOperator,
+                          } as ScoreCondition);
+                        }
+                      }}
+                      value={
+                        condition.field === "default"
+                          ? ">="
+                          : condition.operator
                       }
-                    }}
-                    className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
-                    placeholder="0"
-                  />
-                </>
-              )}
+                    >
+                      <SelectTrigger className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-10">
+                        <SelectValue placeholder=">=" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value=">=">&ge;</SelectItem>
+                        <SelectItem value="<=">&le;</SelectItem>
+                        <SelectItem value="==">=</SelectItem>
+                        <SelectItem value="!=">≠</SelectItem>
+                        <SelectItem value=">">&gt;</SelectItem>
+                        <SelectItem value="<">&lt;</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Input
+                      type="text"
+                      value={
+                        condition.field === "default" ? 0 : condition.value
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Permitir solo números (incluyendo negativos)
+                        if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
+                          if (
+                            condition.field === "score" ||
+                            condition.field === "position"
+                          ) {
+                            setCondition({
+                              ...condition,
+                              value: value === "" ? 0 : Number(value),
+                            } as ScoreCondition);
+                          }
+                        }
+                      }}
+                      className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:border-blue-500 focus:outline-none w-14"
+                      placeholder="0"
+                    />
+                  </>
+                )}
 
               {/* Botones mejorados */}
               <div className="flex gap-1 justify-center">

@@ -45,7 +45,10 @@ import type {
   TournamentGraph,
   TournamentData,
 } from "./types";
-import { validateDefaultEdges } from "./utils/edgeLogic";
+import {
+  validateDefaultEdges,
+  validateEliminationEdges,
+} from "./utils/edgeLogic";
 import {
   debugCircularDependency,
   detectCircularDependency,
@@ -190,6 +193,8 @@ function TournamentEditorInternal({
           id: e.id,
           source: e.fromNode,
           target: e.toNode!,
+          // Incluir targetHandle si existe
+          ...(e.targetHandle && { targetHandle: e.targetHandle }),
           type: editable ? "editable" : "simple",
           data: { ...e, editable },
           style: { strokeWidth: 1.5 },
@@ -199,7 +204,12 @@ function TournamentEditorInternal({
 
     // Validar y asegurar que la lógica de default esté correcta
     if (editable) {
-      validateDefaultEdges(rfEdges);
+      let validatedEdges = validateDefaultEdges(rfEdges);
+      // Validar que los edges de eliminación tengan el estado correcto
+      validatedEdges = validateEliminationEdges(
+        validatedEdges,
+        rfNodes.map((n) => n.data as GraphNode)
+      );
     }
 
     // Aplicar layout automático si no hay posiciones
@@ -461,9 +471,6 @@ function TournamentEditorInternal({
           };
           nextEdges.push(newEdge);
 
-          // Validar que la lógica de default sea correcta
-          validateDefaultEdges(nextEdges);
-
           // Agregar al historial
           addToHistory("ADD_EDGE", {
             edgeId: newEdge.id,
@@ -471,7 +478,15 @@ function TournamentEditorInternal({
           });
         }
 
-        return nextEdges;
+        // Validar que la lógica de default sea correcta
+        let validatedEdges = validateDefaultEdges(nextEdges);
+        // Validar que los edges de eliminación tengan el estado correcto
+        validatedEdges = validateEliminationEdges(
+          validatedEdges,
+          nodes.map((n) => n.data as GraphNode)
+        );
+
+        return validatedEdges;
       });
     },
     [editable, getClosestEdge, setEdges, addToHistory]
@@ -566,6 +581,12 @@ function TournamentEditorInternal({
           }
         }
 
+        // Validar que los edges de eliminación tengan el estado correcto
+        const validatedEdges = validateEliminationEdges(
+          updatedEdges,
+          nodes.map((n) => n.data as GraphNode)
+        );
+
         // Agregar al historial usando el estado actual
         addToHistory("EDIT_EDGE", {
           edgeId,
@@ -573,7 +594,7 @@ function TournamentEditorInternal({
           afterState: { ...targetEdge.data, condition },
         });
 
-        return updatedEdges;
+        return validatedEdges;
       });
 
       // Cerrar la edición del edge después de guardar
@@ -1039,7 +1060,12 @@ function TournamentEditorInternal({
         }
 
         // Validar que la lógica de default sea correcta
-        const validatedEdges = validateDefaultEdges(newEdges);
+        let validatedEdges = validateDefaultEdges(newEdges);
+        // Validar que los edges de eliminación tengan el estado correcto
+        validatedEdges = validateEliminationEdges(
+          validatedEdges,
+          nodes.map((n) => n.data as GraphNode)
+        );
         return validatedEdges;
       });
 

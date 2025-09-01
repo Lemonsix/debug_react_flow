@@ -97,20 +97,24 @@ function createEdge(
   fromNode: string,
   toNode: string,
   outcome: string,
-  isDefault: boolean = false
+  isDefault: boolean = false,
+  targetHandle?: string
 ) {
   return {
     id,
     fromNode,
     toNode,
     outcome,
-    condition: {
-      operator: ">=" as const,
-      value: 0,
-      field: isDefault ? ("default" as const) : ("score" as const),
-    },
+    condition: isDefault
+      ? {
+          field: "default" as const,
+          operator: ">=" as const,
+          value: 0 as const,
+        }
+      : { field: "score" as const, operator: ">" as const, value: 0 as const },
     editable: true,
     isDefault,
+    ...(targetHandle && { targetHandle }),
   };
 }
 
@@ -132,26 +136,52 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("semifinal-2", 2, 200, 300, "Semifinal 2"),
         // Final
         createMatchNode("final", 2, 400, 200, "Final"),
+        // Match por el 3er lugar
+        createMatchNode("tercer-lugar", 2, 400, 400, "3er Lugar"),
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 600, 200),
-        // Nodo único de eliminación para todos los perdedores
-        createSingleEliminationNode(200, 400),
+        // Nodo único de eliminación para el perdedor de la final
+        createSingleEliminationNode(200, 500),
       ];
 
       const edges = [
-        // Semifinal 1 → Final (ganador) - Edge default
-        createEdge("edge-1", "semifinal-1", "final", "Ganador", true),
-        // Semifinal 2 → Final (ganador) - Edge default
-        createEdge("edge-2", "semifinal-2", "final", "Ganador", true),
-        // Final → Podio (1er lugar) - Edge default
-        createEdge("edge-3", "final", "podium", "Ganador", true),
-        // Todos los perdedores van al mismo nodo de eliminación
-        createEdge("edge-4", "semifinal-1", "eliminacion", "Perdedor", true),
-        createEdge("edge-5", "semifinal-2", "eliminacion", "Perdedor", true),
-        createEdge("edge-6", "final", "eliminacion", "Perdedor", true),
-        // Perdedores → Podio (2do y 3er lugar)
-        createEdge("edge-7", "eliminacion", "podium", "2do Lugar", false),
-        createEdge("edge-8", "eliminacion", "podium", "3er Lugar", false),
+        // Semifinal 1 → Final (ganador) - Edge NO default
+        createEdge("edge-1", "semifinal-1", "final", "Ganador", false),
+        // Semifinal 2 → Final (ganador) - Edge NO default
+        createEdge("edge-2", "semifinal-2", "final", "Ganador", false),
+        // Semifinal 1 → 3er Lugar (perdedor) - Edge default
+        createEdge("edge-3", "semifinal-1", "tercer-lugar", "Perdedor", true),
+        // Semifinal 2 → 3er Lugar (perdedor) - Edge default
+        createEdge("edge-4", "semifinal-2", "tercer-lugar", "Perdedor", true),
+        // Final → Podio (1er lugar) - Edge NO default
+        createEdge(
+          "edge-5",
+          "final",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-0"
+        ),
+        // Final → Podio (2do lugar) - Edge default
+        createEdge(
+          "edge-6",
+          "final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-1"
+        ),
+        // 3er Lugar → Podio (3er lugar) - Edge NO default
+        createEdge(
+          "edge-7",
+          "tercer-lugar",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-2"
+        ),
+        // 3er Lugar → Eliminación (perdedor) - Edge default
+        createEdge("edge-8", "tercer-lugar", "eliminacion", "Perdedor", true),
       ];
 
       return {
@@ -191,36 +221,60 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("semifinal-2", 2, 350, 425, "Semifinal 2"),
         // Final
         createMatchNode("final", 2, 600, 275, "Final"),
+        // Match por el 3er lugar
+        createMatchNode("tercer-lugar", 2, 600, 500, "3er Lugar"),
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 800, 275),
-        // Nodo único de eliminación para todos los perdedores
-        createSingleEliminationNode(100, 650),
+        // Nodo único de eliminación para el perdedor de la final
+        createSingleEliminationNode(100, 700),
       ];
 
       const edges = [
-        // Cuartos → Semifinales (ganadores) - Edges default
-        createEdge("edge-1", "cuartos-1", "semifinal-1", "Ganador", true),
-        createEdge("edge-2", "cuartos-2", "semifinal-1", "Ganador", true),
-        createEdge("edge-3", "cuartos-3", "semifinal-2", "Ganador", true),
-        createEdge("edge-4", "cuartos-4", "semifinal-2", "Ganador", true),
-        // Semifinales → Final (ganadores) - Edges default
-        createEdge("edge-5", "semifinal-1", "final", "Ganador", true),
-        createEdge("edge-6", "semifinal-2", "final", "Ganador", true),
-        // Final → Podio (1er lugar) - Edge default
-        createEdge("edge-7", "final", "podium", "Ganador", true),
-        // Todos los perdedores van al mismo nodo de eliminación
-        createEdge("edge-8", "cuartos-1", "eliminacion", "Perdedor", true),
-        createEdge("edge-9", "cuartos-2", "eliminacion", "Perdedor", true),
-        createEdge("edge-10", "cuartos-3", "eliminacion", "Perdedor", true),
-        createEdge("edge-11", "cuartos-4", "eliminacion", "Perdedor", true),
-        // Semifinales → Eliminación (perdedores)
-        createEdge("edge-12", "semifinal-1", "eliminacion", "Perdedor", true),
-        createEdge("edge-13", "semifinal-2", "eliminacion", "Perdedor", true),
-        // Final → Eliminación (perdedor)
-        createEdge("edge-14", "final", "eliminacion", "Perdedor", true),
-        // Perdedores → Podio (2do y 3er lugar)
-        createEdge("edge-15", "eliminacion", "podium", "2do Lugar", false),
-        createEdge("edge-16", "eliminacion", "podium", "3er Lugar", false),
+        // Cuartos → Semifinales (ganadores) - Edges NO default
+        createEdge("edge-1", "cuartos-1", "semifinal-1", "Ganador", false),
+        createEdge("edge-2", "cuartos-2", "semifinal-1", "Ganador", false),
+        createEdge("edge-3", "cuartos-3", "semifinal-2", "Ganador", false),
+        createEdge("edge-4", "cuartos-4", "semifinal-2", "Ganador", false),
+        // Semifinales → Final (ganadores) - Edges NO default
+        createEdge("edge-5", "semifinal-1", "final", "Ganador", false),
+        createEdge("edge-6", "semifinal-2", "final", "Ganador", false),
+        // Semifinales → 3er Lugar (perdedores) - Edges default
+        createEdge("edge-7", "semifinal-1", "tercer-lugar", "Perdedor", true),
+        createEdge("edge-8", "semifinal-2", "tercer-lugar", "Perdedor", true),
+        // Final → Podio (1er lugar) - Edge NO default
+        createEdge(
+          "edge-9",
+          "final",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-0"
+        ),
+        // Final → Podio (2do lugar) - Edge default
+        createEdge(
+          "edge-10",
+          "final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-1"
+        ),
+        // 3er Lugar → Podio (3er lugar) - Edge NO default
+        createEdge(
+          "edge-11",
+          "tercer-lugar",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-2"
+        ),
+        // Cuartos → Eliminación (perdedores)
+        createEdge("edge-12", "cuartos-1", "eliminacion", "Perdedor", true),
+        createEdge("edge-13", "cuartos-2", "eliminacion", "Perdedor", true),
+        createEdge("edge-14", "cuartos-3", "eliminacion", "Perdedor", true),
+        createEdge("edge-15", "cuartos-4", "eliminacion", "Perdedor", true),
+        // 3er Lugar → Eliminación (perdedor)
+        createEdge("edge-16", "tercer-lugar", "eliminacion", "Perdedor", true),
       ];
 
       return {
@@ -275,38 +329,92 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("semifinal-2", 2, 450, 340, "Semifinal 2"),
         // Final
         createMatchNode("final", 2, 650, 260, "Final"),
+        // Match por el 3er lugar
+        createMatchNode("tercer-lugar", 2, 650, 450, "3er Lugar"),
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 800, 260),
-        // Nodo único de eliminación para todos los perdedores
-        createSingleEliminationNode(50, 700),
+        // Nodo único de eliminación para el perdedor de la final
+        createSingleEliminationNode(50, 750),
       ];
 
       const edges = [
-        // Octavos → Cuartos (ganadores) - Edges default
+        // Octavos → Cuartos (ganadores) - Edges NO default
         ...Array.from({ length: 8 }, (_, i) =>
           createEdge(
             `edge-octavos-${i + 1}`,
             `octavos-${i + 1}`,
             `cuartos-${Math.floor(i / 2) + 1}`,
             "Ganador",
-            true
+            false
           )
         ),
-        // Cuartos → Semifinales (ganadores) - Edges default
+        // Cuartos → Semifinales (ganadores) - Edges NO default
         ...Array.from({ length: 4 }, (_, i) =>
           createEdge(
             `edge-cuartos-${i + 1}`,
             `cuartos-${i + 1}`,
             `semifinal-${Math.floor(i / 2) + 1}`,
             "Ganador",
-            true
+            false
           )
         ),
-        // Semifinales → Final (ganadores) - Edges default
-        createEdge("edge-semifinal-1", "semifinal-1", "final", "Ganador", true),
-        createEdge("edge-semifinal-2", "semifinal-2", "final", "Ganador", true),
-        // Final → Podio (1er lugar) - Edge default
-        createEdge("edge-final-1", "final", "podium", "Ganador", true),
+        // Semifinales → Final (ganadores) - Edges NO default
+        createEdge(
+          "edge-semifinal-1",
+          "semifinal-1",
+          "final",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-semifinal-2",
+          "semifinal-2",
+          "final",
+          "Ganador",
+          false
+        ),
+        // Semifinales → 3er Lugar (perdedores) - Edges default
+        createEdge(
+          "edge-tercer-lugar-sf1",
+          "semifinal-1",
+          "tercer-lugar",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-tercer-lugar-sf2",
+          "semifinal-2",
+          "tercer-lugar",
+          "Perdedor",
+          true
+        ),
+        // Final → Podio (1er lugar) - Edge NO default
+        createEdge(
+          "edge-final-1",
+          "final",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-0"
+        ),
+        // Final → Podio (2do lugar) - Edge default
+        createEdge(
+          "edge-final-2",
+          "final",
+          "podium",
+          "Perdedor",
+          true,
+          "sink-podium-1"
+        ),
+        // 3er Lugar → Podio (3er lugar) - Edge NO default
+        createEdge(
+          "edge-tercer-lugar-1",
+          "tercer-lugar",
+          "podium",
+          "Ganador",
+          false,
+          "sink-podium-2"
+        ),
         // Todos los perdedores van al mismo nodo de eliminación
         ...Array.from({ length: 8 }, (_, i) =>
           createEdge(
@@ -327,41 +435,13 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
             true
           )
         ),
-        // Semifinales → Eliminación (perdedores)
+        // 3er Lugar → Eliminación (perdedor)
         createEdge(
-          "edge-eliminacion-sf1",
-          "semifinal-1",
+          "edge-eliminacion-tercer-lugar",
+          "tercer-lugar",
           "eliminacion",
           "Perdedor",
           true
-        ),
-        createEdge(
-          "edge-eliminacion-sf2",
-          "semifinal-2",
-          "eliminacion",
-          "Perdedor",
-          true
-        ),
-        // Final → Eliminación (perdedor)
-        createEdge(
-          "edge-eliminacion-final",
-          "final",
-          "eliminacion",
-          "Perdedor",
-          true
-        ),
-        // Perdedores → Podio (2do y 3er lugar)
-        createEdge(
-          "edge-eliminacion-sf1-podio",
-          "eliminacion",
-          "podium",
-          "2do Lugar"
-        ),
-        createEdge(
-          "edge-eliminacion-sf2-podio",
-          "eliminacion",
-          "podium",
-          "3er Lugar"
         ),
       ];
 
@@ -432,8 +512,8 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
             true
           )
         ),
-        // Final → Podio (1er lugar) - Edge default
-        createEdge("edge-final-1", "final", "podium", "Ganador", true),
+        // Final → Podio (1er lugar) - Edge NO default
+        createEdge("edge-final-1", "final", "podium", "Ganador", false),
         // Rondas → Matches de consolación (perdedores)
         ...Array.from({ length: 4 }, (_, round) =>
           createEdge(
