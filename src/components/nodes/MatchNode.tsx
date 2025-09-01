@@ -25,8 +25,9 @@ export function MatchNode({
   allNodes = [],
   esport,
 }: MatchNodeProps) {
-  // Usar el estado global de edición en lugar del local
-  const isEditing = globalIsEditing || data.editable;
+  // Usar SOLO el estado global de edición, ignorar data.editable
+  // Esto asegura que todos los nodos estén no-editables por defecto
+  const isEditing = globalIsEditing;
 
   // Usar el hook base para la lógica común
   const {
@@ -51,7 +52,11 @@ export function MatchNode({
           config.border
         } rounded-lg shadow-sm
         hover:shadow-md transition-all duration-200
-        ${isEditing ? "ring-2 ring-blue-400 ring-opacity-50" : ""}
+        ${
+          isEditing
+            ? "ring-2 ring-blue-400 ring-opacity-50 border-blue-400"
+            : ""
+        }
         ${
           isEditing
             ? "cursor-grab active:cursor-grabbing"
@@ -95,14 +100,15 @@ export function MatchNode({
             </div>
           </div>
 
-          {/* Botón de edición para nodos match */}
+          {/* Botón de edición para nodos match - siempre visible cuando no está editando */}
           {!isEditing && onStartEditing && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onStartEditing?.();
               }}
-              className="absolute top-1 right-1 px-2 py-1 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm text-xs font-medium text-gray-700"
+              className="absolute top-1 right-1 px-2 py-1 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm text-xs font-medium text-gray-700 hover:border-blue-400 hover:bg-blue-50"
+              title="Editar nodo"
             >
               <PencilIcon className="w-4 h-4" />
             </button>
@@ -200,7 +206,7 @@ export function MatchNode({
         isConnectableEnd={true}
         style={{ width: 15, height: 15 }}
       />
-      
+
       <Handle
         type="source"
         position={Position.Right}

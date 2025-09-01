@@ -21,16 +21,18 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { SwordsIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import CustomConnectionLine from "./components/ConnectionLine";
 import EditableEdge, { SimpleEdge } from "./components/EditableEdge";
 import EditableNode from "./components/EditableNode";
-import CustomConnectionLine from "./components/ConnectionLine";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "./components/ui/tooltip";
 import { useConnectionState } from "./hooks/useConnectionState";
+import useLayoutNodes from "./hooks/useLayoutNodes";
 import type {
   EdgeCondition,
   EsportType,
@@ -47,11 +49,10 @@ import {
   debugCircularDependency,
   detectCircularDependency,
   getNextAvailablePodiumPosition,
+  validatePodiumEdges,
   validateSinkDeletion,
   validateTournamentStructure,
-  validatePodiumEdges,
 } from "./utils/validation";
-import { SwordsIcon } from "lucide-react";
 
 const NODE_W = 400;
 const NODE_H = 280;
@@ -87,6 +88,7 @@ function TournamentEditorInternal({
   });
 
   // Estado global para controlar qué elemento está siendo editado
+  // Por defecto, ningún nodo está en modo edición
   const [currentlyEditing, setCurrentlyEditing] = useState<{
     type: "node" | "edge" | null;
     id: string | null;
@@ -99,14 +101,35 @@ function TournamentEditorInternal({
   const { connectionStart, startConnection, endConnection } =
     useConnectionState();
 
+  // Hook para ELK layout
+  useLayoutNodes();
+
   // Funciones para manejar el estado de edición global
-  const startEditing = useCallback((type: "node" | "edge", id: string) => {
-    setCurrentlyEditing({ type, id });
-  }, []);
+  // Solo un elemento puede estar en edición a la vez
+  const startEditing = useCallback(
+    (type: "node" | "edge", id: string) => {
+      // Si ya hay algo en edición, detenerlo primero
+      if (currentlyEditing.type && currentlyEditing.id) {
+        setCurrentlyEditing({ type: null, id: null });
+      }
+      // Luego iniciar la nueva edición
+      setCurrentlyEditing({ type, id });
+    },
+    [currentlyEditing.type, currentlyEditing.id]
+  );
 
   const stopEditing = useCallback(() => {
+    // Detener cualquier edición activa
     setCurrentlyEditing({ type: null, id: null });
   }, []);
+
+  // Resetear estado de edición cuando cambie el grafo (nuevo template aplicado)
+  useEffect(() => {
+    // Si el grafo cambió (nuevo template), resetear el estado de edición
+    if (graph.nodes.length > 0) {
+      stopEditing();
+    }
+  }, [graph.tournamentId, stopEditing]);
 
   const isCurrentlyEditing = useCallback(
     (type: "node" | "edge", id: string) => {
@@ -114,6 +137,11 @@ function TournamentEditorInternal({
     },
     [currentlyEditing]
   );
+
+  // Función para verificar si algún nodo está en edición
+  const isAnyNodeEditing = useCallback(() => {
+    return currentlyEditing.type === "node";
+  }, [currentlyEditing.type]);
 
   // Sistema de historial
   const addToHistory = useCallback(
@@ -674,6 +702,11 @@ function TournamentEditorInternal({
       return [...updatedExistingNodes, ...newNodes];
     });
 
+    // Si el grafo cambió completamente (nuevo template aplicado), resetear el estado de edición
+    if (rfNodes.length > 0 && nodes.length === 0) {
+      stopEditing();
+    }
+
     // Solo actualizar edges si realmente cambiaron (no solo por agregar nodos)
     setEdges((currentEdges) => {
       // Si no hay edges actuales, usar los nuevos
@@ -837,6 +870,14 @@ function TournamentEditorInternal({
     (params: Connection) => {
       if (!editable || !params.source || !params.target) return;
 
+      // Debug: mostrar información de la conexión
+      console.log("🔗 CONEXIÓN INICIADA:", {
+        source: params.source,
+        target: params.target,
+        targetHandle: params.targetHandle,
+        sourceHandle: params.sourceHandle,
+      });
+
       // Validar que no se cree una dependencia circular
       const circularCheck = detectCircularDependency(
         params.source,
@@ -922,12 +963,16 @@ function TournamentEditorInternal({
         id: newEdgeId,
         source: params.source,
         target: params.target,
+        // Incluir targetHandle si existe para permitir múltiples conexiones por handle
+        ...(params.targetHandle && { targetHandle: params.targetHandle }),
         animated: true,
         type: "editable",
         data: {
           id: newEdgeId,
           fromNode: params.source,
           toNode: params.target,
+          // Incluir targetHandle en los datos también
+          ...(params.targetHandle && { targetHandle: params.targetHandle }),
           outcome: isFirstEdge ? "default" : "score > 0",
           editable: true,
           isDefault: isFirstEdge,
@@ -945,13 +990,13 @@ function TournamentEditorInternal({
       setEdges((eds) => {
         let newEdges = addEdge(newEdge, eds);
 
-        // Validación especial para podios: solo permitir 1 edge de entrada
+        // Validación especial para podios: permitir múltiples edges por handle
         const targetNode = nodes.find((n) => n.id === params.target);
         if (
           targetNode?.data.type === "sink" &&
           (targetNode.data as GraphNode).sinkConfig?.sinkType === "podium"
         ) {
-          // Usar la función de utilidad para validar podios
+          // Usar la función de utilidad para validar podios por handle
           const graphNodes = nodes.map((n) => n.data as GraphNode);
           const graphEdges = newEdges.map((e) => e.data as GraphEdge);
           const podiumValidation = validatePodiumEdges(graphNodes, graphEdges);
@@ -960,7 +1005,7 @@ function TournamentEditorInternal({
             !podiumValidation.valid &&
             podiumValidation.edgesToRemove.length > 0
           ) {
-            // Eliminar los edges anteriores
+            // Eliminar los edges anteriores del mismo handle
             newEdges = newEdges.filter(
               (e) =>
                 !podiumValidation.edgesToRemove.includes(e.data as GraphEdge)
@@ -975,7 +1020,7 @@ function TournamentEditorInternal({
             });
 
             console.log(
-              `🏆 Podio ${params.target}: Edge anterior eliminado, manteniendo solo el más reciente`
+              `🏆 Podio ${params.target} (handle ${params.targetHandle}): Edge anterior eliminado, manteniendo solo el más reciente por handle`
             );
           }
         }
@@ -1842,6 +1887,13 @@ function TournamentEditorInternal({
         >
           ↻ Reset Layout
         </button>
+
+        {/* Indicador de modo edición */}
+        {isAnyNodeEditing() && (
+          <div className="px-3 py-2 bg-blue-100 border border-blue-300 text-blue-800 text-sm font-medium rounded-lg shadow-sm">
+            ✏️ Editando nodo
+          </div>
+        )}
       </div>
 
       {/* React Flow Canvas */}

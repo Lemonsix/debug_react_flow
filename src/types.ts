@@ -103,6 +103,8 @@ export type GraphEdge = {
   fromNode: string;
   outcome: string;
   toNode?: string;
+  // Propiedad para conectar a handles específicos (ej: handles del podio)
+  targetHandle?: string;
   // Nuevas propiedades para condiciones editables
   condition?: EdgeCondition;
   editable?: boolean;

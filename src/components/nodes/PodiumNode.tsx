@@ -26,13 +26,13 @@ export function PodiumNode({
   allNodes = [],
   esport,
 }: PodiumNodeProps) {
-  // Usar el estado global de edición en lugar del local
-  const isEditing = globalIsEditing || data.editable;
+  // Usar SOLO el estado global de edición, ignorar data.editable
+  // Esto asegura que todos los nodos estén no-editables por defecto
+  const isEditing = globalIsEditing;
 
   // Usar el hook base para la lógica común
   const {
     formData,
-    config,
     combinedValidation,
     handleUpdate,
     handleSave,
@@ -51,20 +51,24 @@ export function PodiumNode({
     return Array.from({ length: places }, (_, index) => {
       const position = index + 1;
       const title =
-        position === 1 ? "🥇 1º Lugar" :
-        position === 2 ? "🥈 2º Lugar" :
-        position === 3 ? "🥉 3º Lugar" :
-        `${position}º Lugar`;
+        position === 1
+          ? "🥇 1º Lugar"
+          : position === 2
+          ? "🥈 2º Lugar"
+          : position === 3
+          ? "🥉 3º Lugar"
+          : `${position}º Lugar`;
 
       const startOffset = 16;
       const endOffset = 22;
       const availableHeight = 100 - startOffset - endOffset;
-      const topPosition = startOffset + (availableHeight * (index + 1)) / (places + 1);
+      const topPosition =
+        startOffset + (availableHeight * (index + 1)) / (places + 1);
 
       return (
         <LabeledHandle
           key={`podium-${index}`}
-          id={`podium-${index}`}
+          id={`sink-${data.id}-${index}`}
           title={title}
           type="target"
           position={Position.Left}
@@ -77,7 +81,7 @@ export function PodiumNode({
             top: `${topPosition}%`,
             transform: "translateY(-50%)",
             position: "absolute",
-            left: -12,         // 👈 fuera del card
+            left: -12, // 👈 fuera del card
             zIndex: 20,
           }}
         />
@@ -96,17 +100,29 @@ export function PodiumNode({
         rounded-2xl
         shadow-sm hover:shadow-md
         transition-all duration-200
-        ${isEditing ? "ring-2 ring-yellow-400/40" : ""}
+        ${
+          isEditing
+            ? "ring-2 ring-blue-400 ring-opacity-50 border-blue-400"
+            : ""
+        }
         cursor-grab active:cursor-grabbing
         pl-8        /* 👈 gutter interno; evita que el contenido choque con los handles */
         pr-3 py-2
       `}
       style={{
         // 👇 altura mínima dinámica para distribuir bien los handles
-        minHeight: Math.max(140, 100 + ((data.sinkConfig?.places ?? 3) - 3) * 28),
+        minHeight: Math.max(
+          140,
+          100 + ((data.sinkConfig?.places ?? 3) - 3) * 28
+        ),
       }}
       onClick={() => {
-        if (!isEditing && onStartEditing && formData.type !== "match" && formData.type !== "sink") {
+        if (
+          !isEditing &&
+          onStartEditing &&
+          formData.type !== "match" &&
+          formData.type !== "sink"
+        ) {
           onStartEditing();
         }
       }}
@@ -117,9 +133,13 @@ export function PodiumNode({
           {/* Badge (botón) con cantidad de posiciones */}
           {!isEditing && onStartEditing && (
             <button
-              onClick={(e) => { e.stopPropagation(); onStartEditing?.(); }}
-              className=" top-2 right-2  rounded-sm text-xs font-medium
-                         bg-white/90 text-slate-800 border border-slate-200 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartEditing?.();
+              }}
+              className="absolute top-2 right-2 px-2 py-1 rounded-sm text-xs font-medium
+                           bg-white/90 text-slate-800 border border-slate-200 hover:bg-white hover:border-blue-400 hover:bg-blue-50"
+              title="Editar podio"
             >
               <PencilIcon className="w-4 h-4" />
             </button>
@@ -155,9 +175,11 @@ export function PodiumNode({
                   onClick={handleSave}
                   disabled={!combinedValidation.isValid}
                   className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md
-                    ${combinedValidation.isValid
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : "bg-slate-300 text-slate-500 cursor-not-allowed"}`}
+                    ${
+                      combinedValidation.isValid
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : "bg-slate-300 text-slate-500 cursor-not-allowed"
+                    }`}
                 >
                   <SaveIcon className="w-4 h-4" />
                   Guardar

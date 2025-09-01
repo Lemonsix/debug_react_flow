@@ -22,6 +22,8 @@ export default function EditableNode({
   allNodes = [],
   esport,
 }: EditableNodeProps) {
+  // Por defecto, todos los nodos están en modo no-editable
+  // Solo se activa la edición cuando se llama explícitamente a onStartEditing
   // Renderizar el componente apropiado según el tipo de nodo
   if (data.type === "match") {
     return (

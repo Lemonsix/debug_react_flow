@@ -479,7 +479,6 @@ export function debugCircularDependency(
   existingEdges: Edge[],
   allNodes?: Node[]
 ): void {
-
   console.log("==================================");
   console.log(`Intentando conectar: ${sourceNodeId} → ${targetNodeId}`);
   console.log(`Total de edges existentes: ${existingEdges.length}`);
@@ -668,8 +667,8 @@ export function validateSinkDeletion(
 }
 
 /**
- * Valida que los podios tengan exactamente 1 edge de entrada
- * Si hay múltiples edges, retorna los que deben ser eliminados
+ * Valida que cada handle del podio tenga máximo 1 edge de entrada
+ * Si hay múltiples edges al mismo handle, retorna los que deben ser eliminados
  */
 export function validatePodiumEdges(
   nodes: GraphNode[],
@@ -682,18 +681,30 @@ export function validatePodiumEdges(
   const edgesToRemove: GraphEdge[] = [];
 
   podiums.forEach((podium) => {
-    const edgesToPodium = edges.filter((edge) => edge.toNode === podium.id);
-    
-    if (edgesToPodium.length > 1) {
-      // Ordenar por timestamp para encontrar el más reciente
-      const sortedEdges = edgesToPodium.sort((a, b) => {
-        const timestampA = parseInt(a.id.split('-')[1] || '0');
-        const timestampB = parseInt(b.id.split('-')[1] || '0');
-        return timestampB - timestampA; // Orden descendente
-      });
-      
-      // Mantener solo el edge más reciente, eliminar los anteriores
-      edgesToRemove.push(...sortedEdges.slice(1));
+    // Obtener todos los handles del podio
+    const places = podium.sinkConfig?.places || 3;
+
+    // Para cada posición del podio, verificar que no haya más de 1 edge
+    for (let i = 0; i < places; i++) {
+      const targetHandle = `sink-${podium.id}-${i}`;
+
+      // Filtrar edges que van a este handle específico
+      const edgesToHandle = edges.filter(
+        (edge) =>
+          edge.toNode === podium.id && edge.targetHandle === targetHandle
+      );
+
+      if (edgesToHandle.length > 1) {
+        // Ordenar por timestamp para encontrar el más reciente
+        const sortedEdges = edgesToHandle.sort((a, b) => {
+          const timestampA = parseInt(a.id.split("-")[1] || "0");
+          const timestampB = parseInt(b.id.split("-")[1] || "0");
+          return timestampB - timestampA; // Orden descendente
+        });
+
+        // Mantener solo el edge más reciente, eliminar los anteriores
+        edgesToRemove.push(...sortedEdges.slice(1));
+      }
     }
   });
 
