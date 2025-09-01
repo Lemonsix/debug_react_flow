@@ -43,6 +43,7 @@ import type {
   HistoryState,
   NodeType,
   TournamentGraph,
+  TournamentData,
 } from "./types";
 import { validateDefaultEdges } from "./utils/edgeLogic";
 import {
@@ -52,6 +53,7 @@ import {
   validatePodiumEdges,
   validateSinkDeletion,
   validateTournamentStructure,
+  isSinkConfiguration,
 } from "./utils/validation";
 
 const NODE_W = 400;
@@ -745,10 +747,16 @@ function TournamentEditorInternal({
     // Verificar qué tipos de nodos faltan
     const hasMatch = currentNodes.some((n) => n.type === "match");
     const hasPodium = currentNodes.some(
-      (n) => n.type === "sink" && n.sinkConfig?.sinkType === "podium"
+      (n) =>
+        n.type === "sink" &&
+        isSinkConfiguration(n.config) &&
+        n.config.sinkType === "podium"
     );
     const hasDisqualification = currentNodes.some(
-      (n) => n.type === "sink" && n.sinkConfig?.sinkType === "disqualification"
+      (n) =>
+        n.type === "sink" &&
+        isSinkConfiguration(n.config) &&
+        n.config.sinkType === "eliminacion"
     );
 
     const nodesToCreate: Node[] = [];
@@ -763,7 +771,7 @@ function TournamentEditorInternal({
         slots: Array.from({ length: 2 }, (_, i) => ({ index: i })),
         editable: true, // Match inicia en estado de edición
         position: { x: 200, y: 200 },
-        matchConfig: {
+        config: {
           capacity: 2,
           modalidad: "presencial" as const,
           scheduledDate: undefined,
@@ -789,7 +797,7 @@ function TournamentEditorInternal({
         slots: [],
         editable: false, // Podio NO inicia en estado de edición
         position: { x: 800, y: 150 },
-        sinkConfig: {
+        config: {
           sinkType: "podium",
           position: 1,
           places: 3,
@@ -814,8 +822,8 @@ function TournamentEditorInternal({
         slots: [],
         editable: false, // Eliminación NO inicia en estado de edición
         position: { x: 800, y: 300 },
-        sinkConfig: {
-          sinkType: "disqualification",
+        config: {
+          sinkType: "eliminacion",
         },
       };
 
@@ -994,7 +1002,14 @@ function TournamentEditorInternal({
         const targetNode = nodes.find((n) => n.id === params.target);
         if (
           targetNode?.data.type === "sink" &&
-          (targetNode.data as GraphNode).sinkConfig?.sinkType === "podium"
+          (() => {
+            const nodeConfig = (targetNode.data as GraphNode).config;
+            return (
+              nodeConfig &&
+              isSinkConfiguration(nodeConfig) &&
+              nodeConfig.sinkType === "podium"
+            );
+          })()
         ) {
           // Usar la función de utilidad para validar podios por handle
           const graphNodes = nodes.map((n) => n.data as GraphNode);
@@ -1070,14 +1085,14 @@ function TournamentEditorInternal({
         editable: false, // Los nuevos nodos no se abren automáticamente en edición
         position: { x: 100, y: 100 },
         ...(nodeType === "sink" && {
-          sinkConfig: {
+          config: {
             sinkType: "podium" as const,
             position: podiumPosition,
             places: 3,
           },
         }),
         ...(nodeType === "match" && {
-          matchConfig: {
+          config: {
             capacity: 2,
             modalidad: "presencial" as const,
             scheduledDate: undefined,
@@ -1432,16 +1447,18 @@ function TournamentEditorInternal({
           nodeIdMapping[nodeData.id] = newId;
 
           // Auto-incrementar posición de podio si es necesario
-          let newSinkConfig = nodeData.sinkConfig;
+          let newSinkConfig = nodeData.config;
           if (
             nodeData.type === "sink" &&
-            nodeData.sinkConfig?.sinkType === "podium"
+            nodeData.config &&
+            isSinkConfiguration(nodeData.config) &&
+            nodeData.config.sinkType === "podium"
           ) {
             const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
             const nextPosition =
               getNextAvailablePodiumPosition(currentGraphNodes);
             newSinkConfig = {
-              ...nodeData.sinkConfig,
+              ...nodeData.config,
               position: nextPosition + index, // Incrementar para múltiples
             };
           }
@@ -1453,7 +1470,7 @@ function TournamentEditorInternal({
               x: basePosition.x + (index % 2) * 450 + 50, // Organizar en grid 2x2
               y: basePosition.y + Math.floor(index / 2) * 350 + 50,
             },
-            sinkConfig: newSinkConfig,
+            config: newSinkConfig,
             slots: nodeData.slots.map((slot) => ({
               ...slot,
               participantId: undefined, // Limpiar participantes
@@ -1525,10 +1542,12 @@ function TournamentEditorInternal({
           singleNode.position || { x: 100, y: 100 };
 
         // Auto-incrementar posición de podio si se está copiando un sink de tipo podio
-        let newSinkConfig = singleNode.sinkConfig;
+        let newSinkConfig = singleNode.config;
         if (
           singleNode.type === "sink" &&
-          singleNode.sinkConfig?.sinkType === "podium"
+          singleNode.config &&
+          isSinkConfiguration(singleNode.config) &&
+          singleNode.config.sinkType === "podium"
         ) {
           // Obtener todas las GraphNode actuales de los nodos de React Flow
           const currentGraphNodes = nodes.map((n) => n.data as GraphNode);
@@ -1536,7 +1555,7 @@ function TournamentEditorInternal({
             getNextAvailablePodiumPosition(currentGraphNodes);
 
           newSinkConfig = {
-            ...singleNode.sinkConfig,
+            ...singleNode.config,
             position: nextPosition,
           };
         }
@@ -1549,7 +1568,7 @@ function TournamentEditorInternal({
             x: basePosition.x + 50,
             y: basePosition.y + 50,
           },
-          sinkConfig: newSinkConfig,
+          config: newSinkConfig,
           slots: singleNode.slots.map((slot) => ({
             ...slot,
             participantId: undefined, // Limpiar participantes en la copia
@@ -1771,33 +1790,39 @@ function TournamentEditorInternal({
 
   // Exportar configuración
   const exportConfiguration = useCallback(() => {
-    // Construir el grafo actualizado con el estado actual de React Flow
-    const currentGraph: TournamentGraph = {
-      ...graph,
+    // Construir solo los datos esenciales del torneo (nodos y edges)
+    const tournamentData: TournamentData = {
       nodes: nodes.map((n) => ({
         ...(n.data as GraphNode),
         position: n.position,
         // Asegurar que la configuración de match se incluya
         ...((n.data as GraphNode).type === "match" &&
-          (n.data as GraphNode).matchConfig && {
-            matchConfig: (n.data as GraphNode).matchConfig,
+          (n.data as GraphNode).config && {
+            config: (n.data as GraphNode).config,
           }),
       })),
       edges: edges.map((e) => ({
         ...(e.data as GraphEdge),
       })),
+    };
+
+    // Actualizar el grafo global con el estado actual (mantener todas las propiedades)
+    const currentGraph: TournamentGraph = {
+      ...graph,
+      nodes: tournamentData.nodes,
+      edges: tournamentData.edges,
       metadata: {
         ...graph.metadata,
         lastModified: new Date().toISOString(),
       },
     };
 
-    // Actualizar el grafo global con el estado actual
     if (onGraphChange) {
       onGraphChange(currentGraph);
     }
 
-    const blob = new Blob([JSON.stringify(currentGraph, null, 2)], {
+    // Exportar solo los datos del torneo (sin metadata del sistema)
+    const blob = new Blob([JSON.stringify(tournamentData, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);

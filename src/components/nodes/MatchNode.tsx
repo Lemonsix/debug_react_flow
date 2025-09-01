@@ -1,6 +1,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
-import type { GraphNode, EsportType } from "../../types";
+import type { GraphNode, EsportType, MatchConfiguration } from "../../types";
+import { isMatchConfiguration } from "../../types";
 import { MatchConfigEditor } from "../FormComponents";
 import { useBaseNode } from "./BaseNode";
 
@@ -116,46 +117,48 @@ export function MatchNode({
         </div>
 
         {/* Información del nodo match cuando no está en edición */}
-        {!isEditing && formData.matchConfig && (
-          <div className="text-left">
-            {formData.matchConfig.title && (
-              <div className="text-sm text-emerald-700 font-semibold mb-1">
-                {formData.matchConfig.title}
+        {!isEditing &&
+          formData.config &&
+          isMatchConfiguration(formData.config) && (
+            <div className="text-left">
+              {formData.config.title && (
+                <div className="text-sm text-emerald-700 font-semibold mb-1">
+                  {formData.config.title}
+                </div>
+              )}
+              <div className="text-xs text-emerald-600 font-medium mb-1">
+                {formData.config.modalidad === "presencial"
+                  ? "Presencial"
+                  : "Online"}
               </div>
-            )}
-            <div className="text-xs text-emerald-600 font-medium mb-1">
-              {formData.matchConfig.modalidad === "presencial"
-                ? "Presencial"
-                : "Online"}
-            </div>
-            <div className="text-nowrap text-xs text-emerald-600 mb-2">
-              {formData.matchConfig.capacity} equipos
-            </div>
-            {formData.matchConfig.scheduledDate && (
-              <div className="text-xs text-emerald-600 mb-2">
-                📅 {formData.matchConfig.scheduledDate.toLocaleDateString()}
-                {formData.matchConfig.scheduledTime && (
-                  <span> 🕐 {formData.matchConfig.scheduledTime}</span>
+              <div className="text-nowrap text-xs text-emerald-600 mb-2">
+                {formData.config.capacity} equipos
+              </div>
+              {formData.config.scheduledDate && (
+                <div className="text-xs text-emerald-600 mb-2">
+                  📅 {formData.config.scheduledDate.toLocaleDateString()}
+                  {formData.config.scheduledTime && (
+                    <span> 🕐 {formData.config.scheduledTime}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Slots de equipos */}
+              <div className="space-y-1">
+                {Array.from(
+                  { length: formData.config.capacity || 2 },
+                  (_, index) => (
+                    <div
+                      key={index}
+                      className="px-2 py-1 text-xs border border-emerald-600 rounded  text-emerald-700 text-center"
+                    >
+                      Equipo {index + 1}
+                    </div>
+                  )
                 )}
               </div>
-            )}
-
-            {/* Slots de equipos */}
-            <div className="space-y-1">
-              {Array.from(
-                { length: formData.matchConfig.capacity || 2 },
-                (_, index) => (
-                  <div
-                    key={index}
-                    className="px-2 py-1 text-xs border border-emerald-600 rounded  text-emerald-700 text-center"
-                  >
-                    Equipo {index + 1}
-                  </div>
-                )
-              )}
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Formulario de edición */}
@@ -163,8 +166,8 @@ export function MatchNode({
         <div className="p-2 ">
           <div>
             <MatchConfigEditor
-              config={formData.matchConfig}
-              onChange={(config) => handleUpdate("matchConfig", config)}
+              config={formData.config as MatchConfiguration}
+              onChange={(config) => handleUpdate("config", config)}
               esport={esport}
             />
 

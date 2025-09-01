@@ -384,8 +384,7 @@ export function MatchConfigEditor({
           required
         />
         )}
-        
-      
+
         <FormField
           label="Modalidad"
           value={config.modalidad}
@@ -460,8 +459,7 @@ export function PodiumConfigEditor({
           Define cuántos lugares tendrá el podio (ej: 3 para 1º, 2º, 3º)
         </p>
       </div>
-      
-     
+
     </div>
   );
 }

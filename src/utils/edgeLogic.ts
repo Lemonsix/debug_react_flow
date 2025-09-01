@@ -1,5 +1,6 @@
 import type { Edge } from "@xyflow/react";
-import type { GraphEdge, GraphNode } from "../types";
+import type { GraphNode, GraphEdge } from "../types";
+import { isSinkConfiguration } from "../types";
 
 export interface EdgeSwitchLogic {
   isDefault: boolean;
@@ -58,14 +59,15 @@ export function getEdgeColor(targetNode: GraphNode | undefined): string {
   }
 
   // Determinar color según el tipo de sink
-  const sinkType = targetNode.sinkConfig?.sinkType;
+  const sinkType =
+    targetNode.config && isSinkConfiguration(targetNode.config)
+      ? targetNode.config.sinkType
+      : undefined;
   switch (sinkType) {
-    case "disqualification":
+    case "eliminacion":
       return "#fc5f53"; // Rojo para eliminación
     case "podium":
       return "#44c753"; // Verde para podio
-    case "qualification":
-      return "#2563EB"; // Azul para calificación
     default:
       return "#AAAAAA"; // Color por defecto
   }
@@ -196,6 +198,6 @@ export function validateDefaultEdges(edges: Edge[]): Edge[] {
       });
     }
   });
-  
+
   return edges;
 }

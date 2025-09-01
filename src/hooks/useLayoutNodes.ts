@@ -7,7 +7,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 
-import { type GraphNode } from "../types";
+import { type GraphNode, isSinkConfiguration } from "../types";
 
 // elk layouting options can be found here:
 // https://www.eclipse.org/elk/reference/algorithms/org-eclipse-elk-layered.html
@@ -69,7 +69,8 @@ export const getLayoutedNodes = async (nodes: GraphNode[], edges: Edge[]) => {
         // Para nodos sink (podio), crear ports para cada posición
         ports.push({ id: n.id });
 
-        const places = n.sinkConfig?.places || 3;
+        const places =
+          n.config && isSinkConfiguration(n.config) ? n.config.places || 3 : 3;
         for (let i = 0; i < places; i++) {
           ports.push({
             id: `sink-${n.id}-${i}`,
@@ -85,7 +86,12 @@ export const getLayoutedNodes = async (nodes: GraphNode[], edges: Edge[]) => {
         width: n.type === "sink" ? 120 : 150,
         height:
           n.type === "sink"
-            ? Math.max(80, (n.sinkConfig?.places || 3) * 30)
+            ? Math.max(
+                80,
+                (n.config && isSinkConfiguration(n.config)
+                  ? n.config.places || 3
+                  : 3) * 30
+              )
             : 80,
         properties: {
           "org.eclipse.elk.portConstraints": "FIXED_ORDER",

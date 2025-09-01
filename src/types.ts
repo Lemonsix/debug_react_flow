@@ -44,13 +44,11 @@ export type EdgeCondition = {
   field: "position" | "score" | "default";
 };
 
-export type SinkType = "disqualification" | "qualification" | "podium";
+export type SinkType = "podium" | "eliminacion";
 
 export type SinkConfiguration = {
   sinkType: SinkType;
-  position?: number; // Para podium positions
-  reason?: string; // Para disqualifications
-  threshold?: number; // Para qualifications
+  position?: number; // Para podios: posición en el ranking (1, 2, 3...)
   places?: number; // Para podios: cantidad de lugares (ej: 3 para 1º, 2º, 3º)
 };
 
@@ -78,6 +76,11 @@ export type GoBackendGraph = {
   }> | null;
 };
 
+// Tipo para configuración de nodos (union discriminada)
+export type NodeConfiguration =
+  | { type: "sink"; config: SinkConfiguration }
+  | { type: "match"; config: MatchConfiguration };
+
 // Tipo que usa el componente (simplificado)
 export type GraphNode = {
   id: string;
@@ -90,11 +93,10 @@ export type GraphNode = {
     sourceOutcome?: string;
   }>;
   status?: "empty" | "pending" | "ready" | "live" | "finished";
-  config?: Record<string, unknown>;
+  // Propiedad unificada para configuración de nodos
+  config?: SinkConfiguration | MatchConfiguration;
   // Nuevas propiedades para edición
   editable?: boolean;
-  sinkConfig?: SinkConfiguration;
-  matchConfig?: MatchConfiguration;
   position?: { x: number; y: number };
 };
 
@@ -110,6 +112,12 @@ export type GraphEdge = {
   editable?: boolean;
   // Nueva propiedad para lógica de switch
   isDefault?: boolean;
+};
+
+// Tipo para exportación del torneo (solo datos esenciales)
+export type TournamentData = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 };
 
 export type TournamentGraph = {
@@ -152,3 +160,16 @@ export type HistoryState = {
   actions: HistoryAction[];
   currentIndex: number;
 };
+
+// Funciones helper para type guards
+export function isSinkConfiguration(
+  config: unknown
+): config is SinkConfiguration {
+  return Boolean(config && typeof config === "object" && "sinkType" in config);
+}
+
+export function isMatchConfiguration(
+  config: unknown
+): config is MatchConfiguration {
+  return Boolean(config && typeof config === "object" && "capacity" in config);
+}

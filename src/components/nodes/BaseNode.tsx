@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import type { GraphNode, EsportType } from "../../types";
-import {
-  validateNodeForm,
-} from "../../utils/validation";
+import { isSinkConfiguration } from "../../types";
+import { validateNodeForm } from "../../utils/validation";
 import { validateMatchForEsport } from "../../config/esports";
 
 export interface UseBaseNodeProps {
@@ -23,17 +22,20 @@ export function useBaseNode({
   const [formData, setFormData] = useState({
     type: data.type,
     capacity: data.capacity,
-    matchConfig: data.matchConfig || {
-      capacity: data.capacity,
-      modalidad: "presencial" as const,
-      scheduledDate: undefined,
-      scheduledTime: undefined,
-      title: undefined,
-    },
-    sinkConfig: data.sinkConfig || {
-      sinkType: "podium" as const,
-      places: 3,
-    },
+    config:
+      data.config ||
+      (data.type === "match"
+        ? {
+            capacity: data.capacity,
+            modalidad: "presencial" as const,
+            scheduledDate: undefined,
+            scheduledTime: undefined,
+            title: undefined,
+          }
+        : {
+            sinkType: "podium" as const,
+            places: 3,
+          }),
   });
 
   // Sincronizar formData solo cuando cambien las propiedades relevantes para el formulario
@@ -41,19 +43,22 @@ export function useBaseNode({
     setFormData({
       type: data.type,
       capacity: data.capacity,
-      matchConfig: data.matchConfig || {
-        capacity: data.capacity,
-        modalidad: "presencial" as const,
-        scheduledDate: undefined,
-        scheduledTime: undefined,
-        title: undefined,
-      },
-      sinkConfig: data.sinkConfig || {
-        sinkType: "podium" as const,
-        places: 3,
-      },
+      config:
+        data.config ||
+        (data.type === "match"
+          ? {
+              capacity: data.capacity,
+              modalidad: "presencial" as const,
+              scheduledDate: undefined,
+              scheduledTime: undefined,
+              title: undefined,
+            }
+          : {
+              sinkType: "podium" as const,
+              places: 3,
+            }),
     });
-  }, [data.type, data.capacity, data.matchConfig, data.sinkConfig]);
+  }, [data.type, data.capacity, data.config, data.config]);
 
   // Validación del formulario (solo para nodos match)
   const validation =
@@ -62,7 +67,9 @@ export function useBaseNode({
           formData.type,
           formData.capacity,
           undefined, // No hay sinkConfig
-          formData.matchConfig,
+          formData.type === "match"
+            ? (formData.config as import("../../types").MatchConfiguration)
+            : undefined,
           data.id,
           allNodes
         )
@@ -71,7 +78,11 @@ export function useBaseNode({
   // Validación adicional del esport para nodos match
   const esportValidation = useMemo(() => {
     if (formData.type === "match") {
-      return validateMatchForEsport(esport, formData.capacity, formData.capacity);
+      return validateMatchForEsport(
+        esport,
+        formData.capacity,
+        formData.capacity
+      );
     }
     return { isValid: true, errors: [] };
   }, [esport, formData.type, formData.capacity]);
@@ -89,7 +100,7 @@ export function useBaseNode({
 
   // Función para actualizar el formulario
   const handleUpdate = useCallback(
-    (field: keyof typeof formData, value: any) => {
+    (field: keyof typeof formData, value: unknown) => {
       setFormData((prev) => ({
         ...prev,
         [field]: value,
@@ -107,9 +118,9 @@ export function useBaseNode({
       };
 
       if (formData.type === "match") {
-        updates.matchConfig = formData.matchConfig;
+        updates.config = formData.config;
       } else if (data.type === "sink") {
-        updates.sinkConfig = formData.sinkConfig;
+        updates.config = formData.config;
       }
 
       onChange(updates);
@@ -122,17 +133,20 @@ export function useBaseNode({
     setFormData({
       type: data.type,
       capacity: data.capacity,
-      matchConfig: data.matchConfig || {
-        capacity: data.capacity,
-        modalidad: "presencial" as const,
-        scheduledDate: undefined,
-        scheduledTime: undefined,
-        title: undefined,
-      },
-      sinkConfig: data.sinkConfig || {
-        sinkType: "podium" as const,
-        places: 3,
-      },
+      config:
+        data.config ||
+        (data.type === "match"
+          ? {
+              capacity: data.capacity,
+              modalidad: "presencial" as const,
+              scheduledDate: undefined,
+              scheduledTime: undefined,
+              title: undefined,
+            }
+          : {
+              sinkType: "podium" as const,
+              places: 3,
+            }),
     });
     onStopEditing?.();
   }, [data, onStopEditing]);
@@ -148,14 +162,22 @@ export function useBaseNode({
       };
     } else if (data.type === "sink") {
       // Configuración específica según el tipo de sink
-      if (data.sinkConfig?.sinkType === "podium") {
+      if (
+        data.config &&
+        isSinkConfiguration(data.config) &&
+        data.config.sinkType === "podium"
+      ) {
         return {
           border: "border-yellow-200",
           text: "text-yellow-800",
           accent: "bg-yellow-500",
           icon: "P",
         };
-      } else if (data.sinkConfig?.sinkType === "disqualification") {
+      } else if (
+        data.config &&
+        isSinkConfiguration(data.config) &&
+        data.config.sinkType === "eliminacion"
+      ) {
         return {
           border: "border-red-200",
           text: "text-red-800",

@@ -1,6 +1,7 @@
 import { Position } from "@xyflow/react";
 import { PencilIcon, SaveIcon, TrophyIcon, XIcon } from "lucide-react";
-import type { GraphNode, EsportType } from "../../types";
+import type { GraphNode, EsportType, SinkConfiguration } from "../../types";
+import { isSinkConfiguration } from "../../types";
 import { PodiumConfigEditor } from "../FormComponents";
 import { useBaseNode } from "./BaseNode";
 import { LabeledHandle } from "../LabeledHandle";
@@ -47,7 +48,10 @@ export function PodiumNode({
 
   // Generar handles dinámicamente para nodos podio
   const generatePodiumHandles = () => {
-    const places = data.sinkConfig?.places || 3;
+    const places =
+      data.config && isSinkConfiguration(data.config)
+        ? data.config.places || 3
+        : 3;
     return Array.from({ length: places }, (_, index) => {
       const position = index + 1;
       const title =
@@ -113,7 +117,12 @@ export function PodiumNode({
         // 👇 altura mínima dinámica para distribuir bien los handles
         minHeight: Math.max(
           140,
-          100 + ((data.sinkConfig?.places ?? 3) - 3) * 28
+          100 +
+            ((data.config && isSinkConfiguration(data.config)
+              ? data.config.places ?? 3
+              : 3) -
+              3) *
+              28
         ),
       }}
       onClick={() => {
@@ -158,8 +167,8 @@ export function PodiumNode({
           {isEditing && (
             <div className="pt-1">
               <PodiumConfigEditor
-                config={formData.sinkConfig}
-                onChange={(config) => handleUpdate("sinkConfig", config)}
+                config={formData.config as SinkConfiguration}
+                onChange={(config) => handleUpdate("config", config)}
               />
 
               <div className="flex gap-2 pt-3">

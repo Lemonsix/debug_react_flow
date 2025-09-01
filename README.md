@@ -165,20 +165,34 @@ El sistema es modular y permite:
 
 ## 📋 Formato de Exportación
 
-El JSON exportado contiene:
+El JSON exportado contiene solo los datos esenciales del torneo:
+
 ```json
 {
-  "version": 1,
-  "tournamentId": "string",
-  "nodes": [...],
-  "edges": [...],
-  "metadata": {
-    "createdAt": "ISO Date",
-    "lastModified": "ISO Date",
-    "exportedAt": "ISO Date"
-  }
+  "nodes": [
+    {
+      "id": "match-1",
+      "type": "match",
+      "capacity": 2,
+      "slots": [...],
+      "matchConfig": {...},
+      "position": {"x": 200, "y": 100}
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "fromNode": "match-1",
+      "toNode": "final",
+      "outcome": "Ganador",
+      "condition": {...},
+      "isDefault": true
+    }
+  ]
 }
 ```
+
+**Nota**: Las propiedades del sistema como `version`, `tournamentId`, `esport`, `editable` y `metadata` no se incluyen en la exportación ya que van en el componente padre.
 
 ## 🤝 Contribución
 

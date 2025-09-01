@@ -1,4 +1,5 @@
 import type { GraphNode, EsportType } from "../types";
+import { isSinkConfiguration } from "../types";
 import { MatchNode, PodiumNode, EliminationNode } from "./nodes";
 
 interface EditableNodeProps {
@@ -41,7 +42,11 @@ export default function EditableNode({
   }
 
   if (data.type === "sink") {
-    if (data.sinkConfig?.sinkType === "podium") {
+    if (
+      data.config &&
+      isSinkConfiguration(data.config) &&
+      data.config.sinkType === "podium"
+    ) {
       return (
         <PodiumNode
           data={data}

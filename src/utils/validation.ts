@@ -1,12 +1,15 @@
 import type {
-  NodeType,
   EdgeCondition,
+  GraphEdge,
+  GraphNode,
+  NodeType,
   SinkConfiguration,
   MatchConfiguration,
-  GraphNode,
-  GraphEdge,
 } from "../types";
+import { isSinkConfiguration } from "../types";
 import type { Edge, Node } from "@xyflow/react";
+
+export { isSinkConfiguration, isMatchConfiguration } from "../types";
 
 // Validación para formularios de nodo
 export function validateNodeForm(
@@ -117,8 +120,10 @@ export function validatePodiumPosition(
     (node) =>
       node.id !== currentNodeId &&
       node.type === "sink" &&
-      node.sinkConfig?.sinkType === "podium" &&
-      node.sinkConfig?.position === position
+      node.config &&
+      isSinkConfiguration(node.config) &&
+      node.config.sinkType === "podium" &&
+      node.config.position === position
   );
 
   if (duplicateNode) {
@@ -138,10 +143,16 @@ export function getNextAvailablePodiumPosition(allNodes: GraphNode[]): number {
     .filter(
       (node) =>
         node.type === "sink" &&
-        node.sinkConfig?.sinkType === "podium" &&
-        node.sinkConfig.position
+        node.config &&
+        isSinkConfiguration(node.config) &&
+        node.config.sinkType === "podium" &&
+        node.config.position
     )
-    .map((node) => node.sinkConfig!.position!)
+    .map((node) =>
+      node.config && isSinkConfiguration(node.config)
+        ? node.config.position!
+        : 0
+    )
     .sort((a, b) => a - b);
 
   // Si no hay posiciones ocupadas, empezar en 1
@@ -182,11 +193,18 @@ export function validateTournamentStructure(
   // Filtrar nodos por tipo
   const matchNodes = allNodes.filter((node) => node.type === "match");
   const podiumNodes = allNodes.filter(
-    (node) => node.type === "sink" && node.sinkConfig?.sinkType === "podium"
+    (node) =>
+      node.type === "sink" &&
+      node.config &&
+      isSinkConfiguration(node.config) &&
+      node.config.sinkType === "podium"
   );
   const disqualificationNodes = allNodes.filter(
     (node) =>
-      node.type === "sink" && node.sinkConfig?.sinkType === "disqualification"
+      node.type === "sink" &&
+      node.config &&
+      isSinkConfiguration(node.config) &&
+      node.config.sinkType === "eliminacion"
   );
 
   // Si vamos a eliminar un nodo, verificar que después de eliminarlo siga siendo válido
@@ -558,14 +576,14 @@ export function validateSinkDeletion(
     id: string;
     data: {
       type?: string;
-      sinkConfig?: { sinkType?: string; position?: number };
+      config?: { sinkType?: string; position?: number };
     };
   }[],
   allNodes: {
     id: string;
     data: {
       type?: string;
-      sinkConfig?: { sinkType?: string; position?: number };
+      config?: { sinkType?: string; position?: number };
     };
   }[]
 ): { isValid: boolean; error?: string } {
@@ -580,7 +598,7 @@ export function validateSinkDeletion(
 
   // Regla 1: No se puede eliminar el nodo de eliminación
   const eliminationNode = sinkNodesToDelete.find(
-    (node) => node.data.sinkConfig?.sinkType === "disqualification"
+    (node) => node.data.config?.sinkType === "eliminacion"
   );
 
   if (eliminationNode) {
@@ -592,7 +610,7 @@ export function validateSinkDeletion(
 
   // Regla 2: Solo se pueden eliminar podios contiguos desde el mayor
   const podiumNodesToDelete = sinkNodesToDelete.filter(
-    (node) => node.data.sinkConfig?.sinkType === "podium"
+    (node) => node.data.config?.sinkType === "podium"
   );
 
   if (podiumNodesToDelete.length > 0) {
@@ -601,18 +619,18 @@ export function validateSinkDeletion(
       .filter(
         (node) =>
           node.data.type === "sink" &&
-          node.data.sinkConfig?.sinkType === "podium" &&
-          node.data.sinkConfig?.position
+          node.data.config?.sinkType === "podium" &&
+          node.data.config?.position
       )
       .map((node) => ({
         id: node.id,
-        position: node.data.sinkConfig!.position!,
+        position: node.data.config!.position!,
       }))
       .sort((a, b) => a.position - b.position);
 
     // Obtener posiciones de los podios a eliminar
     const positionsToDelete = podiumNodesToDelete
-      .map((node) => node.data.sinkConfig?.position)
+      .map((node) => node.data.config?.position)
       .filter((pos): pos is number => pos !== undefined)
       .sort((a, b) => a - b);
 
@@ -675,14 +693,21 @@ export function validatePodiumEdges(
   edges: GraphEdge[]
 ): { valid: boolean; edgesToRemove: GraphEdge[] } {
   const podiums = nodes.filter(
-    (node) => node.type === "sink" && node.sinkConfig?.sinkType === "podium"
+    (node) =>
+      node.type === "sink" &&
+      node.config &&
+      isSinkConfiguration(node.config) &&
+      node.config.sinkType === "podium"
   );
 
   const edgesToRemove: GraphEdge[] = [];
 
   podiums.forEach((podium) => {
     // Obtener todos los handles del podio
-    const places = podium.sinkConfig?.places || 3;
+    const places =
+      podium.config && isSinkConfiguration(podium.config)
+        ? podium.config.places || 3
+        : 3;
 
     // Para cada posición del podio, verificar que no haya más de 1 edge
     for (let i = 0; i < places; i++) {

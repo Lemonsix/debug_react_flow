@@ -30,7 +30,7 @@ function createMatchNode(
     })),
     status: "empty" as const,
     editable: true,
-    matchConfig: {
+    config: {
       capacity,
       modalidad: "online" as const,
       title,
@@ -58,8 +58,8 @@ function createEliminationNode(
     }[],
     status: "empty" as const,
     editable: false,
-    sinkConfig: {
-      sinkType: "disqualification" as const,
+    config: {
+      sinkType: "eliminacion" as const,
       reason: title || "Eliminado",
     },
     position: { x, y },
@@ -85,7 +85,7 @@ function createPodiumNode(id: string, places: number, x: number, y: number) {
     }[],
     status: "empty" as const,
     editable: false,
-    sinkConfig: {
+    config: {
       sinkType: "podium" as const,
       places,
     },
