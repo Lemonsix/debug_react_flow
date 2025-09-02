@@ -36,6 +36,27 @@ function validateInboundCapacity(nodes: GraphNode[], edges: GraphEdge[]) {
   return violations; // [[nodeId, inboundEdges], ...]
 }
 
+function validateOutboundCapacity(nodes: GraphNode[], edges: GraphEdge[]) {
+  const cap = new Map(
+    nodes.map((n) => [
+      n.id,
+      n.capacity ??
+        (n.config && "places" in n.config ? n.config.places : undefined) ??
+        Infinity,
+    ])
+  );
+  const outbound = new Map<string, number>();
+  for (const e of edges) {
+    if (e.fromNode) {
+      outbound.set(e.fromNode, (outbound.get(e.fromNode) ?? 0) + 1);
+    }
+  }
+  const violations = [...outbound.entries()].filter(
+    ([id, count]) => count > (cap.get(id) ?? Infinity)
+  );
+  return violations; // [[nodeId, outboundEdges], ...]
+}
+
 // Función helper para crear nodos de match
 function createMatchNode(
   id: string,
@@ -223,9 +244,19 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const violations = validateInboundCapacity(nodes, edges);
-      if (violations.length > 0) {
-        console.warn("Capacity violations detected:", violations);
+      const inboundViolations = validateInboundCapacity(nodes, edges);
+      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      if (inboundViolations.length > 0) {
+        console.warn(
+          "Inbound capacity violations detected:",
+          inboundViolations
+        );
+      }
+      if (outboundViolations.length > 0) {
+        console.warn(
+          "Outbound capacity violations detected:",
+          outboundViolations
+        );
       }
 
       return {
@@ -322,9 +353,19 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const violations = validateInboundCapacity(nodes, edges);
-      if (violations.length > 0) {
-        console.warn("Capacity violations detected:", violations);
+      const inboundViolations = validateInboundCapacity(nodes, edges);
+      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      if (inboundViolations.length > 0) {
+        console.warn(
+          "Inbound capacity violations detected:",
+          inboundViolations
+        );
+      }
+      if (outboundViolations.length > 0) {
+        console.warn(
+          "Outbound capacity violations detected:",
+          outboundViolations
+        );
       }
 
       return {
@@ -496,9 +537,19 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const violations = validateInboundCapacity(nodes, edges);
-      if (violations.length > 0) {
-        console.warn("Capacity violations detected:", violations);
+      const inboundViolations = validateInboundCapacity(nodes, edges);
+      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      if (inboundViolations.length > 0) {
+        console.warn(
+          "Inbound capacity violations detected:",
+          inboundViolations
+        );
+      }
+      if (outboundViolations.length > 0) {
+        console.warn(
+          "Outbound capacity violations detected:",
+          outboundViolations
+        );
       }
 
       return {
@@ -543,6 +594,9 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("perdedora-2", 2, 500, 150, "Perdedora 2"),
         createMatchNode("perdedora-3", 2, 500, 250, "Perdedora 3"),
         createMatchNode("perdedora-4", 2, 500, 350, "Perdedora 4"),
+        // Nodos intermedios para emparejar perdedores
+        createMatchNode("perdedora-inter-1", 2, 575, 100, "Perdedora Inter 1"),
+        createMatchNode("perdedora-inter-2", 2, 575, 300, "Perdedora Inter 2"),
         createMatchNode("perdedora-semi-1", 2, 650, 100, "Perdedora Semi 1"),
         createMatchNode("perdedora-semi-2", 2, 650, 300, "Perdedora Semi 2"),
         createMatchNode("perdedora-final", 2, 800, 200, "Perdedora Final"),
@@ -644,31 +698,46 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           true
         ),
 
-        // Llave perdedora (ganadores)
+        // Llave perdedora (ganadores van a nodos intermedios)
         createEdge(
           "edge-p1",
           "perdedora-1",
-          "perdedora-semi-1",
+          "perdedora-inter-1",
           "Ganador",
           false
         ),
         createEdge(
           "edge-p2",
           "perdedora-2",
-          "perdedora-semi-1",
+          "perdedora-inter-1",
           "Ganador",
           false
         ),
         createEdge(
           "edge-p3",
           "perdedora-3",
-          "perdedora-semi-2",
+          "perdedora-inter-2",
           "Ganador",
           false
         ),
         createEdge(
           "edge-p4",
           "perdedora-4",
+          "perdedora-inter-2",
+          "Ganador",
+          false
+        ),
+        // Nodos intermedios van a semi-finales
+        createEdge(
+          "edge-pi1",
+          "perdedora-inter-1",
+          "perdedora-semi-1",
+          "Ganador",
+          false
+        ),
+        createEdge(
+          "edge-pi2",
+          "perdedora-inter-2",
           "perdedora-semi-2",
           "Ganador",
           false
@@ -713,6 +782,21 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createEdge(
           "edge-p4-elim",
           "perdedora-4",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        // Nodos intermedios (perdedores van a eliminación)
+        createEdge(
+          "edge-pi1-elim",
+          "perdedora-inter-1",
+          "eliminacion",
+          "Perdedor",
+          true
+        ),
+        createEdge(
+          "edge-pi2-elim",
+          "perdedora-inter-2",
           "eliminacion",
           "Perdedor",
           true
@@ -786,9 +870,19 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const violations = validateInboundCapacity(nodes, edges);
-      if (violations.length > 0) {
-        console.warn("Capacity violations detected:", violations);
+      const inboundViolations = validateInboundCapacity(nodes, edges);
+      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      if (inboundViolations.length > 0) {
+        console.warn(
+          "Inbound capacity violations detected:",
+          inboundViolations
+        );
+      }
+      if (outboundViolations.length > 0) {
+        console.warn(
+          "Outbound capacity violations detected:",
+          outboundViolations
+        );
       }
 
       return {
@@ -1131,9 +1225,19 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       );
 
       // Validar capacity antes de retornar
-      const violations = validateInboundCapacity(nodes, edges);
-      if (violations.length > 0) {
-        console.warn("Capacity violations detected:", violations);
+      const inboundViolations = validateInboundCapacity(nodes, edges);
+      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      if (inboundViolations.length > 0) {
+        console.warn(
+          "Inbound capacity violations detected:",
+          inboundViolations
+        );
+      }
+      if (outboundViolations.length > 0) {
+        console.warn(
+          "Outbound capacity violations detected:",
+          outboundViolations
+        );
       }
 
       return {
