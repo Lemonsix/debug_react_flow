@@ -1836,9 +1836,12 @@ function TournamentEditorInternal({
         const { position, editable, ...essentialData } = nodeData;
         return essentialData;
       }),
-      edges: edges.map((e) => ({
-        ...(e.data as GraphEdge),
-      })),
+      edges: edges.map((e) => {
+        const edgeData = e.data as GraphEdge;
+        // Remover campos del sistema: outcome, editable, isDefault
+        const { outcome, editable, isDefault, ...essentialEdgeData } = edgeData;
+        return essentialEdgeData;
+      }),
     };
 
     // Actualizar el grafo global con el estado actual (mantener todas las propiedades)
@@ -1911,7 +1914,7 @@ function TournamentEditorInternal({
         {editable && (
           <>
             {/* Botones para agregar nodos */}
-            <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1 bg-emerald-50 hover:bg-emerald-100 transition-colors w-24">
+            <div className="flex bg-emerald-50 rounded-lg shadow-sm border border-gray-200 p-1 hover:bg-emerald-100 transition-colors w-24">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button

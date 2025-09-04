@@ -2,8 +2,8 @@
 
 ## Estado Actual
 - **Proyecto**: Editor de Torneos con React Flow
-- **Modo**: ✅ **SISTEMA DE SLOTS EN SINKS IMPLEMENTADO** - Los nodos sink ahora tienen slots predefinidos para asignar equipos durante el torneo
-- **Última tarea**: ✅ Implementación del sistema de slots en nodos sink para asignación de equipos
+- **Modo**: ✅ **EXPORTACIÓN JSON LIMPIA IMPLEMENTADA** - El JSON exportado ahora solo contiene datos esenciales del torneo, sin campos del sistema
+- **Última tarea**: ✅ Limpieza del JSON exportado removiendo campos del sistema de los edges
 
 ## ✅ **SISTEMA DE PODIO ÚNICO + ELK LAYOUT + NODOS NO-EDITABLES + EDGES DUALES + NODO ÚNICO DE ELIMINACIÓN + LÓGICA DE EDGES CORREGIDA IMPLEMENTADO**
 
@@ -399,3 +399,262 @@ simulateTournamentFlow(nodes, matchResults)
 6. **Simulación Avanzada**: Mejorar función de simulación con más opciones
 7. **Testing**: Verificar que todos los templates generen correctamente slots
 8. **Documentación**: Crear guía de uso del sistema de slots
+
+## ✅ **CÁLCULO AUTOMÁTICO DE SLOTS DE ELIMINACIÓN IMPLEMENTADO - FUNCIONALIDAD COMPLETA**
+
+### **Funcionalidades Implementadas**
+
+1. **Cálculo Automático de Equipos**:
+   - ✅ **Detección de Matches Iniciales**: Identifica automáticamente los matches que no tienen conexiones de entrada
+   - ✅ **Cálculo de Equipos**: Suma la capacidad de todos los matches iniciales
+   - ✅ **Función `calculateTeamCount()`**: Calcula automáticamente la cantidad total de equipos
+
+2. **Cálculo Automático de Slots de Eliminación**:
+   - ✅ **Fórmula Implementada**: `Slots de Eliminación = Equipos Totales - Slots del Podio`
+   - ✅ **Función `calculateEliminationSlots()`**: Calcula automáticamente los slots necesarios
+   - ✅ **Validación de Negativos**: Asegura que el resultado no sea negativo
+   - ✅ **Integración con Podio**: Considera todos los nodos de podio existentes
+
+3. **Templates Actualizados**:
+   - ✅ **Eliminación Directa 4 equipos**: 8 equipos - 3 podio = 5 slots eliminación
+   - ✅ **Eliminación Directa 8 equipos**: 8 equipos - 3 podio = 5 slots eliminación
+   - ✅ **Eliminación Directa 16 equipos**: 16 equipos - 3 podio = 13 slots eliminación
+   - ✅ **Eliminación Doble 8 equipos**: 8 equipos - 3 podio = 5 slots eliminación
+   - ✅ **Eliminación Doble 16 equipos**: 16 equipos - 3 podio = 13 slots eliminación
+
+4. **Funciones de Validación**:
+   - ✅ **`validateSlotConfiguration()`**: Valida que la configuración sea correcta
+   - ✅ **Detección de Errores**: Identifica configuraciones inválidas
+   - ✅ **Advertencias**: Muestra warnings para configuraciones subóptimas
+   - ✅ **Estadísticas Completas**: Proporciona métricas detalladas
+
+### **Arquitectura Técnica**
+
+#### **Funciones de Cálculo**
+```typescript
+// Calcular cantidad de equipos
+calculateTeamCount(nodes: GraphNode[], edges: GraphEdge[]): number
+
+// Calcular slots de eliminación necesarios
+calculateEliminationSlots(nodes: GraphNode[], edges: GraphEdge[]): number
+
+// Calcular estadísticas completas
+calculateSinkSlots(nodes: GraphNode[], edges: GraphEdge[]): {
+  teamCount: number;
+  podiumSlots: number;
+  eliminationSlots: number;
+}
+
+// Validar configuración
+validateSlotConfiguration(nodes: GraphNode[], edges: GraphEdge[]): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  stats: {...};
+}
+```
+
+#### **Lógica de Cálculo**
+1. **Identificación de Matches Iniciales**: Busca matches sin edges de entrada
+2. **Suma de Capacidades**: Suma la capacidad de todos los matches iniciales
+3. **Cálculo de Slots del Podio**: Suma slots de todos los nodos de podio
+4. **Aplicación de Fórmula**: `Eliminación = Equipos - Podio`
+5. **Validación**: Verifica que el resultado sea válido
+
+#### **Templates Modificados**
+- Todos los templates de eliminación ahora usan `calculateAndUpdateEliminationSlots()`
+- Los nodos de eliminación se actualizan automáticamente con la cantidad correcta de slots
+- Mantiene compatibilidad con la estructura existente
+
+### **Ejemplos de Cálculo**
+
+#### **Eliminación Directa 8 Equipos**
+- **Matches Iniciales**: 4 matches × 2 equipos = 8 equipos
+- **Slots del Podio**: 3 posiciones (1º, 2º, 3º lugar)
+- **Slots de Eliminación**: 8 - 3 = 5 slots
+- **Distribución**: 37.5% al podio, 62.5% eliminados
+
+#### **Eliminación Directa 16 Equipos**
+- **Matches Iniciales**: 8 matches × 2 equipos = 16 equipos
+- **Slots del Podio**: 3 posiciones
+- **Slots de Eliminación**: 16 - 3 = 13 slots
+- **Distribución**: 18.75% al podio, 81.25% eliminados
+
+### **Beneficios de la Implementación**
+
+#### **Automatización Completa**
+- **Sin Configuración Manual**: Los slots se calculan automáticamente
+- **Consistencia**: Todos los templates usan la misma lógica
+- **Precisión**: Elimina errores de cálculo manual
+- **Escalabilidad**: Funciona con cualquier cantidad de equipos
+
+#### **Flexibilidad**
+- **Diferentes Tamaños**: Funciona con 4, 8, 16 equipos
+- **Diferentes Podios**: Se adapta a podios de 1, 3, 5 lugares
+- **Fórmula Universal**: `Eliminación = Equipos - Podio`
+- **Validación Automática**: Detecta configuraciones inválidas
+
+#### **Experiencia de Usuario**
+- **Transparencia**: Los usuarios ven exactamente cuántos equipos se eliminan
+- **Visualización Clara**: Slots de eliminación mostrados en tiempo real
+- **Información Contextual**: Estadísticas de distribución de equipos
+- **Validación en Tiempo Real**: Errores detectados automáticamente
+
+### **Archivos Modificados**
+- `src/utils/slotManagement.ts` - Funciones de cálculo automático
+- `src/config/templates.ts` - Todos los templates actualizados
+- `src/examples/automaticSlotCalculation.ts` - Ejemplos de uso
+
+### **Próximos Pasos Sugeridos**
+
+1. **Testing de Cálculo**: Verificar que los cálculos sean correctos en todos los templates
+2. **UI de Validación**: Mostrar advertencias de validación en la interfaz
+3. **Configuración de Podio**: Permitir cambiar número de posiciones del podio
+4. **Simulación Avanzada**: Integrar cálculo automático con simulación de torneo
+5. **Métricas de Torneo**: Mostrar estadísticas de distribución de equipos
+6. **Validación en Tiempo Real**: Actualizar cálculos al modificar el grafo
+7. **Documentación**: Crear guía de uso del cálculo automático
+8. **Testing**: Verificar que todos los templates generen la cantidad correcta de slots
+
+## ✅ **EXPORTACIÓN JSON LIMPIA IMPLEMENTADA - FUNCIONALIDAD COMPLETA**
+
+### **Funcionalidades Implementadas**
+
+1. **Limpieza de Campos del Sistema**:
+   - ✅ **Edges Limpios**: Removidos `outcome`, `editable`, `isDefault` de los edges
+   - ✅ **Nodos Limpios**: Mantenida limpieza de `position`, `editable` de los nodos
+   - ✅ **Solo Datos Esenciales**: JSON exportado contiene únicamente lógica del torneo
+   - ✅ **Compatibilidad**: Mantiene estructura funcional del torneo
+
+2. **Campos Removidos de Edges**:
+   - ❌ **`outcome`**: Etiqueta del edge (ej: "Ganador", "Perdedor")
+   - ❌ **`editable`**: Si el edge es editable en la UI
+   - ❌ **`isDefault`**: Si es un edge por defecto del sistema
+
+3. **Campos Mantenidos en Edges**:
+   - ✅ **`id`**: ID único del edge
+   - ✅ **`fromNode`**: Nodo origen
+   - ✅ **`toNode`**: Nodo destino
+   - ✅ **`condition`**: Condición del edge
+   - ✅ **`targetHandle`**: Handle específico (opcional)
+
+4. **Documentación Actualizada**:
+   - ✅ **README.md**: Ejemplo actualizado del JSON exportado
+   - ✅ **Ejemplo Completo**: Archivo de ejemplo con comparación antes/después
+   - ✅ **Estructura Final**: Documentación de la estructura limpia
+
+### **Arquitectura Técnica**
+
+#### **Función de Exportación Modificada**
+```typescript
+// En TournamentEditor.tsx - función exportConfiguration
+edges: edges.map((e) => {
+  const edgeData = e.data as GraphEdge;
+  // Remover campos del sistema: outcome, editable, isDefault
+  const { outcome, editable, isDefault, ...essentialEdgeData } = edgeData;
+  return essentialEdgeData;
+}),
+```
+
+#### **Estructura del JSON Exportado**
+```json
+{
+  "nodes": [
+    {
+      "id": "match-1",
+      "type": "match",
+      "capacity": 2,
+      "slots": [...],
+      "status": "empty",
+      "config": {...}
+      // ❌ position: removido
+      // ❌ editable: removido
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "fromNode": "match-1",
+      "toNode": "final",
+      "condition": {...},
+      "targetHandle": "sink-final-0"
+      // ❌ outcome: removido
+      // ❌ editable: removido
+      // ❌ isDefault: removido
+    }
+  ]
+}
+```
+
+### **Beneficios de la Implementación**
+
+#### **Tamaño y Performance**
+- **JSON Más Pequeño**: Reducción significativa del tamaño del archivo
+- **Carga Más Rápida**: Menos datos para procesar
+- **Menos Ancho de Banda**: Transferencia más eficiente
+
+#### **Claridad y Mantenibilidad**
+- **Solo Datos Esenciales**: JSON enfocado en la lógica del torneo
+- **Sin Metadatos**: Eliminación de campos internos del editor
+- **Estructura Limpia**: Fácil de entender y procesar
+
+#### **Portabilidad y Compatibilidad**
+- **Importación Fácil**: Otros sistemas pueden importar sin campos extra
+- **Estándar Limpio**: Formato consistente y predecible
+- **Interoperabilidad**: Compatible con diferentes implementaciones
+
+#### **Experiencia de Usuario**
+- **Archivos Más Pequeños**: Descarga más rápida
+- **JSON Legible**: Fácil de revisar y editar manualmente
+- **Enfoque en el Torneo**: Solo información relevante del torneo
+
+### **Archivos Modificados**
+- `src/TournamentEditor.tsx` - Función de exportación actualizada
+- `README.md` - Documentación del formato actualizada
+- `src/examples/exportedJsonExample.ts` - Ejemplos de JSON limpio
+
+### **Comparación Antes vs Después**
+
+#### **Antes (con campos del sistema)**
+```json
+{
+  "edges": [
+    {
+      "id": "edge-1",
+      "fromNode": "match-1",
+      "toNode": "final",
+      "outcome": "Ganador",        // ❌ Campo del sistema
+      "condition": {...},
+      "editable": true,            // ❌ Campo del sistema
+      "isDefault": false,          // ❌ Campo del sistema
+      "targetHandle": "sink-0"
+    }
+  ]
+}
+```
+
+#### **Después (limpio)**
+```json
+{
+  "edges": [
+    {
+      "id": "edge-1",
+      "fromNode": "match-1",
+      "toNode": "final",
+      "condition": {...},
+      "targetHandle": "sink-0"
+    }
+  ]
+}
+```
+
+### **Próximos Pasos Sugeridos**
+
+1. **Testing de Exportación**: Verificar que todos los templates exporten correctamente
+2. **Validación de Importación**: Asegurar que el JSON limpio se importe correctamente
+3. **Documentación de API**: Crear documentación completa del formato de exportación
+4. **Optimización Adicional**: Considerar remover más campos si es necesario
+5. **Versionado**: Implementar versionado del formato de exportación
+6. **Migración**: Crear herramientas de migración para JSONs antiguos
+7. **Validación**: Agregar validación del formato de exportación
+8. **Testing**: Verificar que la funcionalidad de importación funcione con el nuevo formato

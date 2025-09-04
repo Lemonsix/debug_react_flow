@@ -4,6 +4,10 @@ import type {
   GraphNode,
   GraphEdge,
 } from "../types";
+import {
+  calculateEliminationSlots,
+  updateEliminationNodeSlots,
+} from "../utils/slotManagement";
 
 export type TournamentTemplate = {
   id: string;
@@ -131,6 +135,26 @@ function createSingleEliminationNode(x: number, y: number, slots: number = 1) {
   return createEliminationNode("eliminacion", x, y, "Eliminado", slots);
 }
 
+// Función helper para calcular y actualizar slots de eliminación automáticamente
+function calculateAndUpdateEliminationSlots(
+  nodes: GraphNode[],
+  edges: GraphEdge[]
+): GraphNode[] {
+  const eliminationSlots = calculateEliminationSlots(nodes, edges);
+
+  return nodes.map((node) => {
+    if (
+      node.type === "sink" &&
+      node.config &&
+      "sinkType" in node.config &&
+      node.config.sinkType === "eliminacion"
+    ) {
+      return updateEliminationNodeSlots(node, eliminationSlots);
+    }
+    return node;
+  });
+}
+
 // Función helper para crear nodos de podio
 function createPodiumNode(id: string, places: number, x: number, y: number) {
   // Parámetros x, y no se usan para permitir ELK layout automático
@@ -199,7 +223,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     participants: 4,
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
-      const nodes = [
+      const initialNodes = [
         // Semifinal 1
         createMatchNode("semifinal-1", 2, 200, 100, "Semifinal 1"),
         // Semifinal 2
@@ -210,7 +234,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("tercer-lugar", 2, 400, 400, "3er Lugar"),
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 600, 200),
-        // Nodo único de eliminación para el perdedor de la final
+        // Nodo único de eliminación (slots calculados automáticamente)
         createSingleEliminationNode(200, 500),
       ];
 
@@ -255,8 +279,8 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const inboundViolations = validateInboundCapacity(nodes, edges);
-      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      const inboundViolations = validateInboundCapacity(initialNodes, edges);
+      const outboundViolations = validateOutboundCapacity(initialNodes, edges);
       if (inboundViolations.length > 0) {
         console.warn(
           "Inbound capacity violations detected:",
@@ -269,6 +293,9 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           outboundViolations
         );
       }
+
+      // Calcular slots de eliminación automáticamente
+      const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
       return {
         version: 1,
@@ -296,7 +323,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     participants: 8,
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
-      const nodes = [
+      const initialNodes = [
         // Cuartos de final
         createMatchNode("cuartos-1", 2, 100, 50, "Cuartos 1"),
         createMatchNode("cuartos-2", 2, 100, 200, "Cuartos 2"),
@@ -311,7 +338,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
         createMatchNode("tercer-lugar", 2, 600, 500, "3er Lugar"),
         // Podio único con 3 posiciones
         createPodiumNode("podium", 3, 800, 275),
-        // Nodo único de eliminación para el perdedor de la final
+        // Nodo único de eliminación (slots calculados automáticamente)
         createSingleEliminationNode(100, 700),
       ];
 
@@ -364,8 +391,8 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const inboundViolations = validateInboundCapacity(nodes, edges);
-      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      const inboundViolations = validateInboundCapacity(initialNodes, edges);
+      const outboundViolations = validateOutboundCapacity(initialNodes, edges);
       if (inboundViolations.length > 0) {
         console.warn(
           "Inbound capacity violations detected:",
@@ -378,6 +405,9 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           outboundViolations
         );
       }
+
+      // Calcular slots de eliminación automáticamente
+      const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
       return {
         version: 1,
@@ -405,7 +435,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     participants: 16,
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
-      const nodes = [
+      const initialNodes = [
         // Octavos de final
         ...Array.from({ length: 8 }, (_, i) =>
           createMatchNode(
@@ -548,8 +578,8 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const inboundViolations = validateInboundCapacity(nodes, edges);
-      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      const inboundViolations = validateInboundCapacity(initialNodes, edges);
+      const outboundViolations = validateOutboundCapacity(initialNodes, edges);
       if (inboundViolations.length > 0) {
         console.warn(
           "Inbound capacity violations detected:",
@@ -562,6 +592,9 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           outboundViolations
         );
       }
+
+      // Calcular slots de eliminación automáticamente
+      const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
       return {
         version: 1,
@@ -590,7 +623,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
     participants: 8,
     esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
     generateGraph: (esport: EsportType) => {
-      const nodes = [
+      const initialNodes = [
         // Llave ganadora (izquierda)
         createMatchNode("ganadora-1", 2, 50, 50, "Ganadora 1"),
         createMatchNode("ganadora-2", 2, 50, 150, "Ganadora 2"),
@@ -881,8 +914,8 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       ];
 
       // Validar capacity antes de retornar
-      const inboundViolations = validateInboundCapacity(nodes, edges);
-      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      const inboundViolations = validateInboundCapacity(initialNodes, edges);
+      const outboundViolations = validateOutboundCapacity(initialNodes, edges);
       if (inboundViolations.length > 0) {
         console.warn(
           "Inbound capacity violations detected:",
@@ -895,6 +928,9 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           outboundViolations
         );
       }
+
+      // Calcular slots de eliminación automáticamente
+      const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
       return {
         version: 1,
@@ -965,7 +1001,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       const podium = createPodiumNode(`podium`, 3, 0, 0);
       const eliminacion = createSingleEliminationNode(0, 0);
 
-      const nodes = [
+      const initialNodes = [
         ...wbR16,
         ...wbQF,
         ...wbSF,
@@ -1236,8 +1272,8 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       );
 
       // Validar capacity antes de retornar
-      const inboundViolations = validateInboundCapacity(nodes, edges);
-      const outboundViolations = validateOutboundCapacity(nodes, edges);
+      const inboundViolations = validateInboundCapacity(initialNodes, edges);
+      const outboundViolations = validateOutboundCapacity(initialNodes, edges);
       if (inboundViolations.length > 0) {
         console.warn(
           "Inbound capacity violations detected:",
@@ -1250,6 +1286,9 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
           outboundViolations
         );
       }
+
+      // Calcular slots de eliminación automáticamente
+      const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
       return {
         version: 1,

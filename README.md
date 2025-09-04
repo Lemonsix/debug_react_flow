@@ -184,15 +184,14 @@ El JSON exportado contiene solo los datos esenciales del torneo:
       "id": "edge-1",
       "fromNode": "match-1",
       "toNode": "final",
-      "outcome": "Ganador",
       "condition": {...},
-      "isDefault": true
+      "targetHandle": "sink-final-0"
     }
   ]
 }
 ```
 
-**Nota**: Las propiedades del sistema como `version`, `tournamentId`, `esport`, `editable` y `metadata` no se incluyen en la exportación ya que van en el componente padre.
+**Nota**: Las propiedades del sistema como `version`, `tournamentId`, `esport`, `editable`, `metadata`, `outcome`, `isDefault` no se incluyen en la exportación ya que son campos internos del sistema.
 
 ## 🤝 Contribución
 
