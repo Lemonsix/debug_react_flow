@@ -2,8 +2,8 @@
 
 ## Estado Actual
 - **Proyecto**: Editor de Torneos con React Flow
-- **Modo**: ✅ **SISTEMA DE PODIO ÚNICO + ELK LAYOUT + NODOS NO-EDITABLES IMPLEMENTADO** - Un nodo podio con N handles, posicionamiento automático y edición controlada
-- **Última tarea**: ✅ Implementación del sistema de nodos no-editables por defecto con edición controlada uno a uno
+- **Modo**: ✅ **SISTEMA DE SLOTS EN SINKS IMPLEMENTADO** - Los nodos sink ahora tienen slots predefinidos para asignar equipos durante el torneo
+- **Última tarea**: ✅ Implementación del sistema de slots en nodos sink para asignación de equipos
 
 ## ✅ **SISTEMA DE PODIO ÚNICO + ELK LAYOUT + NODOS NO-EDITABLES + EDGES DUALES + NODO ÚNICO DE ELIMINACIÓN + LÓGICA DE EDGES CORREGIDA IMPLEMENTADO**
 
@@ -312,13 +312,90 @@ El sistema ahora incluye:
 - **Performance Mejorada**: Menos nodos y mejor organización visual
 - **UX Optimizada**: Prevención de ediciones accidentales y control total del usuario
 
+## ✅ **SISTEMA DE SLOTS EN SINKS IMPLEMENTADO - FUNCIONALIDAD COMPLETA**
+
+### **Funcionalidades Implementadas**
+
+1. **Estructura de Slots en Sinks**:
+   - ✅ **SinkConfiguration Extendida**: Ahora incluye propiedad `slots: number` para definir cantidad de slots
+   - ✅ **Generación Automática**: Los nodos sink generan automáticamente slots según su configuración
+   - ✅ **Slots Predefinidos**: Cada slot tiene índice, participantId, sourceNodeId y sourceOutcome
+   - ✅ **Compatibilidad**: Mantiene compatibilidad con estructura existente
+
+2. **Visualización de Slots**:
+   - ✅ **PodiumNode Mejorado**: Muestra slots del podio con medallas (🥇🥈🥉) y estado de ocupación
+   - ✅ **EliminationNode Mejorado**: Muestra slots de eliminación con iconos (💀) y estado de ocupación
+   - ✅ **Indicadores Visuales**: Slots ocupados en verde, vacíos en gris
+   - ✅ **Contador de Slots**: Muestra cantidad de slots disponibles en cada nodo
+
+3. **Funciones de Gestión de Slots**:
+   - ✅ **assignTeamToSlot()**: Asigna equipo a slot específico
+   - ✅ **unassignTeamFromSlot()**: Desasigna equipo de slot específico
+   - ✅ **findFirstAvailableSlot()**: Encuentra primer slot disponible
+   - ✅ **getOccupiedSlots()**: Obtiene slots ocupados
+   - ✅ **getEmptySlots()**: Obtiene slots vacíos
+   - ✅ **hasAvailableSlots()**: Verifica si hay slots disponibles
+   - ✅ **simulateTournamentFlow()**: Simula flujo completo del torneo
+
+4. **Templates Actualizados**:
+   - ✅ **Nodos de Podio**: Generan slots automáticamente según número de lugares
+   - ✅ **Nodos de Eliminación**: Generan slots automáticamente (por defecto 1 slot)
+   - ✅ **Configuración Flexible**: Permite especificar número de slots por nodo
+   - ✅ **Compatibilidad**: Todos los templates existentes funcionan con nueva estructura
+
+### **Arquitectura Técnica**
+
+#### **Tipos Actualizados**
+- `SinkConfiguration` - Agregada propiedad `slots: number`
+- `GraphNode` - Mantiene estructura de slots existente
+- Funciones helper en `src/utils/slotManagement.ts`
+
+#### **Componentes Modificados**
+- `src/types.ts` - SinkConfiguration extendida
+- `src/config/templates.ts` - Funciones de creación actualizadas
+- `src/components/nodes/PodiumNode.tsx` - Visualización de slots del podio
+- `src/components/nodes/EliminationNode.tsx` - Visualización de slots de eliminación
+- `src/utils/slotManagement.ts` - Funciones de gestión de slots
+
+#### **Funciones de Gestión**
+```typescript
+// Asignar equipo a slot específico
+assignTeamToSlot(node, slotIndex, participantId, sourceNodeId, sourceOutcome)
+
+// Asignar al primer slot disponible
+assignTeamToFirstAvailableSlot(node, participantId, sourceNodeId, sourceOutcome)
+
+// Simular flujo completo del torneo
+simulateTournamentFlow(nodes, matchResults)
+```
+
+### **Beneficios de la Implementación**
+
+#### **Gestión de Torneos**
+- **Asignación Automática**: Equipos se asignan automáticamente a slots según resultados
+- **Seguimiento Visual**: Estado de cada posición del podio y eliminación visible
+- **Flexibilidad**: Número de slots configurable por nodo
+- **Trazabilidad**: Cada asignación incluye origen (nodo y resultado)
+
+#### **Experiencia de Usuario**
+- **Visualización Clara**: Slots ocupados y vacíos claramente diferenciados
+- **Información Contextual**: Medallas para podio, iconos para eliminación
+- **Estado en Tiempo Real**: Contadores de slots disponibles
+- **Interfaz Intuitiva**: Fácil identificar qué equipos están en qué posiciones
+
+#### **Desarrollo**
+- **API Completa**: Funciones helper para todas las operaciones de slots
+- **Type Safety**: Tipos TypeScript para todas las operaciones
+- **Simulación**: Función para simular flujo completo del torneo
+- **Extensibilidad**: Fácil agregar nuevos tipos de sinks con slots
+
 ## Próximos Pasos Sugeridos
 
-1. **Testing de Edición Controlada**: Verificar que solo un nodo pueda estar en edición a la vez
-2. **Validación de Handles**: Asegurar que las conexiones a handles específicos funcionen
-3. **Performance**: Evaluar el rendimiento con templates complejos (16 equipos)
-4. **Personalización de Layout**: Permitir ajustar opciones de ELK según preferencias
-5. **Testing de ELK Layout**: Verificar que el posicionamiento automático funcione correctamente
-6. **Documentación**: Crear guía de uso del sistema de edición controlada
-7. **Testing**: Verificar que todos los templates generen correctamente el grafo con ELK
-8. **Feedback de Usuario**: Recopilar comentarios sobre la nueva experiencia de edición
+1. **Testing de Slots**: Verificar que la asignación de equipos funcione correctamente
+2. **Integración con Backend**: Conectar sistema de slots con backend Go
+3. **Persistencia**: Guardar estado de slots en base de datos
+4. **Validación**: Agregar validaciones para evitar asignaciones duplicadas
+5. **UI de Asignación**: Crear interfaz para asignar equipos manualmente
+6. **Simulación Avanzada**: Mejorar función de simulación con más opciones
+7. **Testing**: Verificar que todos los templates generen correctamente slots
+8. **Documentación**: Crear guía de uso del sistema de slots

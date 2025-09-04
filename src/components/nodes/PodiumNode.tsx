@@ -147,7 +147,7 @@ export function PodiumNode({
                 onStartEditing?.();
               }}
               className="absolute top-2 right-2 px-2 py-1 rounded-sm text-xs font-medium
-                           bg-white/90 text-slate-800 border border-slate-200 hover:bg-white hover:border-blue-400 hover:bg-blue-50"
+                           bg-white/90 text-slate-800 border border-slate-200 hover:bg-blue-50 hover:border-blue-400"
               title="Editar podio"
             >
               <PencilIcon className="w-4 h-4" />
@@ -160,6 +160,51 @@ export function PodiumNode({
               <div className="text-sm text-yellow-300 font-semibold flex items-center gap-1">
                 <TrophyIcon className="w-15 h-5" /> Podio
               </div>
+              <div className="text-xs text-slate-400">
+                {data.slots.length} posiciones disponibles
+              </div>
+            </div>
+          )}
+
+          {/* Slots del podio */}
+          {!isEditing && (
+            <div className="space-y-1">
+              {data.slots.map((slot, index) => {
+                const position = index + 1;
+                const isOccupied = slot.participantId;
+                const medal =
+                  position === 1
+                    ? "🥇"
+                    : position === 2
+                    ? "🥈"
+                    : position === 3
+                    ? "🥉"
+                    : "🏆";
+
+                return (
+                  <div
+                    key={slot.index}
+                    className={`flex items-center gap-2 px-2 py-1 rounded text-xs
+                      ${
+                        isOccupied
+                          ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                          : "bg-slate-50 text-slate-500 border border-slate-200"
+                      }`}
+                  >
+                    <span className="text-sm">{medal}</span>
+                    <span className="font-medium">{position}º Lugar</span>
+                    <span className="flex-1 text-right">
+                      {isOccupied ? (
+                        <span className="text-green-600 font-medium">
+                          {slot.participantId}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Vacío</span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
 

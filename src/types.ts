@@ -67,6 +67,7 @@ export type SinkConfiguration = {
   sinkType: SinkType;
   position?: number; // Para podios: posición en el ranking (1, 2, 3...)
   places?: number; // Para podios: cantidad de lugares (ej: 3 para 1º, 2º, 3º)
+  slots: number; // Número de slots disponibles en el sink
 };
 
 // Tipo que viene del backend de Go

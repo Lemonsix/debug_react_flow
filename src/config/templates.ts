@@ -95,25 +95,31 @@ function createEliminationNode(
   id: string,
   x: number,
   y: number,
-  title?: string
+  title?: string,
+  slots: number = 1
 ) {
   // Parámetros x, y no se usan para permitir ELK layout automático
   void x;
   void y;
+
+  // Generar slots automáticamente
+  const generatedSlots = Array.from({ length: slots }, (_, index) => ({
+    index,
+    participantId: undefined,
+    sourceNodeId: undefined,
+    sourceOutcome: undefined,
+  }));
+
   return {
     id,
     type: "sink" as const,
-    slots: [] as {
-      index: number;
-      participantId?: string;
-      sourceNodeId?: string;
-      sourceOutcome?: string;
-    }[],
+    slots: generatedSlots,
     status: "empty" as const,
     editable: false,
     config: {
       sinkType: "eliminacion" as const,
       reason: title || "Eliminado",
+      slots,
     },
     // No definir posición fija para permitir ELK layout
     // position: { x, y },
@@ -121,8 +127,8 @@ function createEliminationNode(
 }
 
 // Función helper para crear un nodo de eliminación único
-function createSingleEliminationNode(x: number, y: number) {
-  return createEliminationNode("eliminacion", x, y, "Eliminado");
+function createSingleEliminationNode(x: number, y: number, slots: number = 1) {
+  return createEliminationNode("eliminacion", x, y, "Eliminado", slots);
 }
 
 // Función helper para crear nodos de podio
@@ -130,20 +136,25 @@ function createPodiumNode(id: string, places: number, x: number, y: number) {
   // Parámetros x, y no se usan para permitir ELK layout automático
   void x;
   void y;
+
+  // Generar slots automáticamente según el número de lugares
+  const generatedSlots = Array.from({ length: places }, (_, index) => ({
+    index,
+    participantId: undefined,
+    sourceNodeId: undefined,
+    sourceOutcome: undefined,
+  }));
+
   return {
     id,
     type: "sink" as const,
-    slots: [] as {
-      index: number;
-      participantId?: string;
-      sourceNodeId?: string;
-      sourceOutcome?: string;
-    }[],
+    slots: generatedSlots,
     status: "empty" as const,
     editable: false,
     config: {
       sinkType: "podium" as const,
       places,
+      slots: places,
     },
     // No definir posición fija para permitir ELK layout
     // position: { x, y },
