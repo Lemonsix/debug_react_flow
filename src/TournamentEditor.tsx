@@ -135,7 +135,8 @@ function TournamentEditorInternal({
     if (graph.nodes.length > 0) {
       stopEditing();
     }
-  }, [graph.tournamentId, graph.nodes.length, stopEditing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph.tournamentId, stopEditing]);
 
   // Aplicar layout automático cuando se aplica un template
   useEffect(() => {
@@ -148,7 +149,8 @@ function TournamentEditorInternal({
 
       return () => clearTimeout(timer);
     }
-  }, [graph.tournamentId, graph.nodes.length, getLayoutedElements]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph.tournamentId, getLayoutedElements]);
 
   const isCurrentlyEditing = useCallback(
     (type: "node" | "edge", id: string) => {
@@ -513,7 +515,8 @@ function TournamentEditorInternal({
         return validatedEdges;
       });
     },
-    [editable, getClosestEdge, setEdges, addToHistory, nodes]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editable, getClosestEdge, setEdges, addToHistory]
   );
 
   // Función para actualizar condiciones de edges
@@ -624,8 +627,8 @@ function TournamentEditorInternal({
       // Cerrar la edición del edge después de guardar
       stopEditing();
     },
-    [setEdges, addToHistory, stopEditing, nodes]
-    // Incluimos 'nodes' para validación de eliminación
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [setEdges, addToHistory, stopEditing]
   );
 
   // Función para manejar cambios en nodos
@@ -780,7 +783,8 @@ function TournamentEditorInternal({
       // Mantener edges actuales si no cambiaron
       return currentEdges;
     });
-  }, [rfNodes, rfEdges, setNodes, setEdges, nodes.length, stopEditing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rfNodes, rfEdges, setNodes, setEdges]);
 
   // Función para crear automáticamente la estructura mínima del torneo
   const createMinimumTournamentStructure = useCallback(() => {
@@ -1106,7 +1110,8 @@ function TournamentEditorInternal({
         afterState: newEdge,
       });
     },
-    [editable, setEdges, addToHistory, edges, nodes, startEditing]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editable, setEdges, addToHistory, edges]
   );
 
   // Agregar nuevo nodo
