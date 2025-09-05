@@ -8,13 +8,13 @@ export const ESPORT_CONFIGS: Record<EsportType, EsportConfiguration> = {
       loser: "Perdedor",
       bo1: "Ganador BO1",
       bo3: "Ganador BO3",
-      bo5: "Ganador BO5"
+      bo5: "Ganador BO5",
     },
     validationRules: {
       allowMultipleTeams: false,
       requireEvenTeams: true,
-      maxMatchesPerTeam: 1
-    }
+      maxMatchesPerTeam: 1,
+    },
   },
   valorant: {
     maxTeamsPerMatch: 2,
@@ -23,13 +23,13 @@ export const ESPORT_CONFIGS: Record<EsportType, EsportConfiguration> = {
       loser: "Perdedor",
       bo1: "Ganador BO1",
       bo3: "Ganador BO3",
-      bo5: "Ganador BO5"
+      bo5: "Ganador BO5",
     },
     validationRules: {
       allowMultipleTeams: false,
       requireEvenTeams: true,
-      maxMatchesPerTeam: 1
-    }
+      maxMatchesPerTeam: 1,
+    },
   },
   fifa: {
     maxTeamsPerMatch: 2,
@@ -38,56 +38,53 @@ export const ESPORT_CONFIGS: Record<EsportType, EsportConfiguration> = {
       loser: "Perdedor",
       bo1: "Ganador BO1",
       bo3: "Ganador BO3",
-      bo5: "Ganador BO5"
+      bo5: "Ganador BO5",
     },
     validationRules: {
       allowMultipleTeams: false,
       requireEvenTeams: true,
-      maxMatchesPerTeam: 1
-    }
+      maxMatchesPerTeam: 1,
+    },
   },
-  "clash-royale": {
+  clash_royale: {
     maxTeamsPerMatch: 2,
     edgeLabels: {
       winner: "Ganador",
       loser: "Perdedor",
       bo1: "Ganador BO1",
       bo3: "Ganador BO3",
-      bo5: "Ganador BO5"
+      bo5: "Ganador BO5",
     },
     validationRules: {
       allowMultipleTeams: false,
       requireEvenTeams: true,
-      maxMatchesPerTeam: 1
-    }
+      maxMatchesPerTeam: 1,
+    },
   },
-  "teamfight-tactics": {
-    maxTeamsPerMatch: 2,
+  teamfight_tactics: {
+    maxTeamsPerMatch: 8,
     edgeLabels: {
       winner: "Ganador",
       loser: "Perdedor",
-      bo1: "Ganador BO1",
-      bo3: "Ganador BO3",
-      bo5: "Ganador BO5"
     },
     validationRules: {
-      allowMultipleTeams: false,
-      requireEvenTeams: true,
-      maxMatchesPerTeam: 1
-    }
+      allowMultipleTeams: true,
+      requireEvenTeams: false,
+      maxMatchesPerTeam: 1,
+    },
   },
   fortnite: {
     maxTeamsPerMatch: 100, // N participantes configurables
     edgeLabels: {
       winner: "Ganador",
-      loser: "Perdedor"
+      loser: "Perdedor",
     },
     validationRules: {
       allowMultipleTeams: true,
       requireEvenTeams: false,
-      maxMatchesPerTeam: 1
-    }
-  }
+      maxMatchesPerTeam: 1,
+    },
+  },
 };
 
 export function getEsportConfig(esport: EsportType): EsportConfiguration {
@@ -95,8 +92,8 @@ export function getEsportConfig(esport: EsportType): EsportConfiguration {
 }
 
 export function validateMatchForEsport(
-  esport: EsportType, 
-  capacity: number, 
+  esport: EsportType,
+  capacity: number,
   teamCount: number
 ): {
   isValid: boolean;
@@ -107,7 +104,9 @@ export function validateMatchForEsport(
 
   // Validar número máximo de equipos por match
   if (teamCount > config.maxTeamsPerMatch) {
-    errors.push(`Este esport solo permite máximo ${config.maxTeamsPerMatch} equipos por match`);
+    errors.push(
+      `Este esport solo permite máximo ${config.maxTeamsPerMatch} equipos por match`
+    );
   }
 
   // Validar que el número de equipos sea par si es requerido
@@ -117,11 +116,13 @@ export function validateMatchForEsport(
 
   // Validar que la capacidad del nodo coincida con el número de equipos
   if (capacity !== teamCount) {
-    errors.push(`La capacidad del nodo (${capacity}) debe coincidir con el número de equipos (${teamCount})`);
+    errors.push(
+      `La capacidad del nodo (${capacity}) debe coincidir con el número de equipos (${teamCount})`
+    );
   }
 
   return {
     isValid: errors.length === 0,
-    errors
+    errors,
   };
 }

@@ -4,6 +4,7 @@ import type {
   GraphNode,
   GraphEdge,
 } from "../types";
+import { createEdgeWithAutoAllocation } from "../types";
 import {
   calculateEliminationSlots,
   updateEliminationNodeSlots,
@@ -185,7 +186,7 @@ function createPodiumNode(id: string, places: number, x: number, y: number) {
   };
 }
 
-// Función helper para crear edges
+// Función helper para crear edges (versión legacy - mantiene compatibilidad)
 function createEdge(
   id: string,
   fromNode: string,
@@ -193,7 +194,7 @@ function createEdge(
   outcome: string,
   isDefault: boolean = false,
   targetHandle?: string
-) {
+): GraphEdge {
   return {
     id,
     fromNode,
@@ -206,9 +207,44 @@ function createEdge(
           value: 0 as const,
         }
       : { field: "score" as const, operator: ">" as const, value: 0 as const },
+    allocation: { mode: "FILL_AVAILABLE" }, // Valor por defecto
     editable: true,
     isDefault,
     ...(targetHandle && { targetHandle }),
+  };
+}
+
+// Función helper para actualizar edges existentes con asignación automática
+function updateEdgesWithAllocation(
+  edges: GraphEdge[],
+  nodes: GraphNode[]
+): GraphEdge[] {
+  return edges.map((edge) => {
+    const targetNode = nodes.find((n) => n.id === edge.toNode);
+    if (!targetNode) return edge;
+
+    return createEdgeWithAutoAllocation(
+      edge.id,
+      edge.fromNode,
+      edge.outcome || "default",
+      edge.toNode || "",
+      targetNode.type,
+      targetNode.config,
+      edge.condition,
+      {
+        editable: edge.editable,
+        isDefault: edge.isDefault,
+        targetHandle: edge.targetHandle,
+      }
+    );
+  });
+}
+
+// Función helper para aplicar asignación automática a un grafo completo
+function applyAllocationToGraph(graph: TournamentGraph): TournamentGraph {
+  return {
+    ...graph,
+    edges: updateEdgesWithAllocation(graph.edges, graph.nodes),
   };
 }
 
@@ -221,7 +257,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       "Torneo de eliminación directa para 4 equipos con podio de 3 posiciones",
     category: "eliminacion",
     participants: 4,
-    esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
+    esports: ["cs2", "valorant", "fifa", "clash_royale", "teamfight_tactics"],
     generateGraph: (esport: EsportType) => {
       const initialNodes = [
         // Semifinal 1
@@ -297,12 +333,15 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       // Calcular slots de eliminación automáticamente
       const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
+      // Actualizar edges con asignación automática
+      const updatedEdges = updateEdgesWithAllocation(edges, nodes);
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-4-${Date.now()}`,
         esport,
         nodes,
-        edges,
+        edges: updatedEdges,
         editable: true,
         metadata: {
           createdAt: new Date().toISOString(),
@@ -321,7 +360,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       "Torneo de eliminación directa para 8 equipos con podio de 3 posiciones",
     category: "eliminacion",
     participants: 8,
-    esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
+    esports: ["cs2", "valorant", "fifa", "clash_royale", "teamfight_tactics"],
     generateGraph: (esport: EsportType) => {
       const initialNodes = [
         // Cuartos de final
@@ -433,7 +472,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       "Torneo de eliminación directa para 16 equipos con podio de 3 posiciones",
     category: "eliminacion",
     participants: 16,
-    esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
+    esports: ["cs2", "valorant", "fifa", "clash_royale", "teamfight_tactics"],
     generateGraph: (esport: EsportType) => {
       const initialNodes = [
         // Octavos de final
@@ -621,7 +660,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       "Torneo de eliminación doble para 8 equipos con podio de 3 posiciones",
     category: "eliminacion-doble",
     participants: 8,
-    esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
+    esports: ["cs2", "valorant", "fifa", "clash_royale", "teamfight_tactics"],
     generateGraph: (esport: EsportType) => {
       const initialNodes = [
         // Llave ganadora (izquierda)
@@ -956,7 +995,7 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       "Torneo de eliminación doble para 16 equipos con podio de 3 posiciones",
     category: "eliminacion-doble",
     participants: 16,
-    esports: ["cs2", "valorant", "fifa", "clash-royale", "teamfight-tactics"],
+    esports: ["cs2", "valorant", "fifa", "clash_royale", "teamfight_tactics"],
     generateGraph: (esport: EsportType) => {
       // --- Winners Bracket (WB) ---
       const wbR16 = Array.from({ length: 8 }, (_, i) =>
@@ -1324,4 +1363,16 @@ export function getTemplatesByEsport(esport: EsportType) {
 
 export function getTemplateById(id: string) {
   return TOURNAMENT_TEMPLATES.find((template) => template.id === id);
+}
+
+// Función helper para generar un template con asignación automática aplicada
+export function generateTemplateWithAllocation(
+  templateId: string,
+  esport: EsportType
+): TournamentGraph | null {
+  const template = getTemplateById(templateId);
+  if (!template) return null;
+
+  const graph = template.generateGraph(esport);
+  return applyAllocationToGraph(graph);
 }

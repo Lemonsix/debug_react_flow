@@ -45,6 +45,7 @@ import type {
   TournamentGraph,
   TournamentData,
 } from "./types";
+import { createEdgeWithAutoAllocation } from "./types";
 import {
   validateDefaultEdges,
   validateEliminationEdges,
@@ -134,7 +135,7 @@ function TournamentEditorInternal({
     if (graph.nodes.length > 0) {
       stopEditing();
     }
-  }, [graph.tournamentId, stopEditing]);
+  }, [graph.tournamentId, graph.nodes.length, stopEditing]);
 
   // Aplicar layout automático cuando se aplica un template
   useEffect(() => {
@@ -147,7 +148,7 @@ function TournamentEditorInternal({
 
       return () => clearTimeout(timer);
     }
-  }, [graph.tournamentId, getLayoutedElements]);
+  }, [graph.tournamentId, graph.nodes.length, getLayoutedElements]);
 
   const isCurrentlyEditing = useCallback(
     (type: "node" | "edge", id: string) => {
@@ -217,10 +218,9 @@ function TournamentEditorInternal({
 
     // Validar y asegurar que la lógica de default esté correcta
     if (editable) {
-      let validatedEdges = validateDefaultEdges(rfEdges);
       // Validar que los edges de eliminación tengan el estado correcto
-      validatedEdges = validateEliminationEdges(
-        validatedEdges,
+      validateEliminationEdges(
+        validateDefaultEdges(rfEdges),
         rfNodes.map((n) => n.data as GraphNode)
       );
     }
@@ -462,24 +462,35 @@ function TournamentEditorInternal({
           );
           const isFirstEdge = existingEdgesFromSource.length === 0;
 
+          // Obtener información del nodo destino para la asignación automática
+          const targetNode = nodes.find((n) => n.id === closeEdge.target);
+          const targetNodeData = targetNode?.data as GraphNode | undefined;
+
+          // Crear edge con asignación automática
+          const edgeData = createEdgeWithAutoAllocation(
+            `edge-${Date.now()}`,
+            closeEdge.source,
+            isFirstEdge ? "default" : "points >= 0",
+            closeEdge.target,
+            targetNodeData?.type || "match",
+            targetNodeData?.config,
+            {
+              field: isFirstEdge ? ("default" as const) : ("score" as const),
+              operator: ">=" as const,
+              value: 0,
+            },
+            {
+              editable: true,
+              isDefault: isFirstEdge,
+            }
+          );
+
           const newEdge: Edge = {
             id: `edge-${Date.now()}`,
             source: closeEdge.source,
             target: closeEdge.target,
             type: "editable",
-            data: {
-              id: `edge-${Date.now()}`,
-              fromNode: closeEdge.source,
-              toNode: closeEdge.target,
-              outcome: isFirstEdge ? "default" : "points >= 0",
-              editable: true,
-              isDefault: isFirstEdge,
-              condition: {
-                field: isFirstEdge ? ("default" as const) : ("points" as const),
-                operator: ">=" as const,
-                value: 0,
-              },
-            },
+            data: edgeData,
             markerEnd: { type: MarkerType.ArrowClosed },
           };
           nextEdges.push(newEdge);
@@ -502,7 +513,7 @@ function TournamentEditorInternal({
         return validatedEdges;
       });
     },
-    [editable, getClosestEdge, setEdges, addToHistory]
+    [editable, getClosestEdge, setEdges, addToHistory, nodes]
   );
 
   // Función para actualizar condiciones de edges
@@ -613,8 +624,8 @@ function TournamentEditorInternal({
       // Cerrar la edición del edge después de guardar
       stopEditing();
     },
-    [setEdges, addToHistory, stopEditing]
-    // Removemos 'edges' de las dependencias ya que usamos el estado actual en setEdges
+    [setEdges, addToHistory, stopEditing, nodes]
+    // Incluimos 'nodes' para validación de eliminación
   );
 
   // Función para manejar cambios en nodos
@@ -769,7 +780,7 @@ function TournamentEditorInternal({
       // Mantener edges actuales si no cambiaron
       return currentEdges;
     });
-  }, [rfNodes, rfEdges, setNodes, setEdges]);
+  }, [rfNodes, rfEdges, setNodes, setEdges, nodes.length, stopEditing]);
 
   // Función para crear automáticamente la estructura mínima del torneo
   const createMinimumTournamentStructure = useCallback(() => {
@@ -834,6 +845,7 @@ function TournamentEditorInternal({
           sinkType: "podium",
           position: 1,
           places: 3,
+          slots: 3,
         },
       };
 
@@ -856,6 +868,7 @@ function TournamentEditorInternal({
         position: { x: 800, y: 300 },
         config: {
           sinkType: "eliminacion",
+          slots: 1,
         },
       };
 
@@ -1093,7 +1106,7 @@ function TournamentEditorInternal({
         afterState: newEdge,
       });
     },
-    [editable, setEdges, addToHistory, edges]
+    [editable, setEdges, addToHistory, edges, nodes, startEditing]
   );
 
   // Agregar nuevo nodo
@@ -1127,6 +1140,7 @@ function TournamentEditorInternal({
             sinkType: "podium" as const,
             position: podiumPosition,
             places: 3,
+            slots: 3,
           },
         }),
         ...(nodeType === "match" && {
@@ -1833,13 +1847,16 @@ function TournamentEditorInternal({
       nodes: nodes.map((n) => {
         const nodeData = n.data as GraphNode;
         // Solo incluir datos esenciales del torneo, excluir propiedades del sistema
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { position, editable, ...essentialData } = nodeData;
         return essentialData;
       }),
       edges: edges.map((e) => {
         const edgeData = e.data as GraphEdge;
-        // Remover campos del sistema: outcome, editable, isDefault
-        const { outcome, editable, isDefault, ...essentialEdgeData } = edgeData;
+        // Remover campos del sistema: editable, isDefault
+        // Mantener outcome, toNodeType y toNodeConfig para la lógica de asignación automática
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { editable, isDefault, ...essentialEdgeData } = edgeData;
         return essentialEdgeData;
       }),
     };
