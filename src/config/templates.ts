@@ -214,6 +214,17 @@ function createEdge(
   };
 }
 
+// Función helper para extraer el slot index del targetHandle
+function extractSlotIndexFromTargetHandle(
+  targetHandle?: string
+): number | null {
+  if (!targetHandle) return null;
+
+  // Patrón: sink-podium-{index} o sink-eliminacion-{index}
+  const match = targetHandle.match(/sink-\w+-(\d+)/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 // Función helper para actualizar edges existentes con asignación automática
 function updateEdgesWithAllocation(
   edges: GraphEdge[],
@@ -223,7 +234,8 @@ function updateEdgesWithAllocation(
     const targetNode = nodes.find((n) => n.id === edge.toNode);
     if (!targetNode) return edge;
 
-    return createEdgeWithAutoAllocation(
+    // Crear el edge base con asignación automática
+    const baseEdge = createEdgeWithAutoAllocation(
       edge.id,
       edge.fromNode,
       edge.outcome || "default",
@@ -237,6 +249,20 @@ function updateEdgesWithAllocation(
         targetHandle: edge.targetHandle,
       }
     );
+
+    // Si hay un targetHandle específico, usar ese slot en lugar del automático
+    const slotIndex = extractSlotIndexFromTargetHandle(edge.targetHandle);
+    if (slotIndex !== null && baseEdge.allocation.mode === "DIRECT_SLOT") {
+      return {
+        ...baseEdge,
+        allocation: {
+          ...baseEdge.allocation,
+          toSlotIndex: slotIndex,
+        },
+      };
+    }
+
+    return baseEdge;
   });
 }
 
