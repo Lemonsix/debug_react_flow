@@ -250,13 +250,19 @@ function updateEdgesWithAllocation(
       }
     );
 
-    // Si hay un targetHandle específico, usar ese slot en lugar del automático
+    // Si hay un targetHandle específico para nodos de podio, usar ese slot
     const slotIndex = extractSlotIndexFromTargetHandle(edge.targetHandle);
-    if (slotIndex !== null && baseEdge.allocation.mode === "DIRECT_SLOT") {
+    if (
+      slotIndex !== null &&
+      targetNode.type === "sink" &&
+      targetNode.config &&
+      "sinkType" in targetNode.config &&
+      targetNode.config.sinkType === "podium"
+    ) {
       return {
         ...baseEdge,
         allocation: {
-          ...baseEdge.allocation,
+          mode: "DIRECT_SLOT",
           toSlotIndex: slotIndex,
         },
       };
@@ -474,12 +480,15 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       // Calcular slots de eliminación automáticamente
       const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
+      // Actualizar edges con asignación automática
+      const updatedEdges = updateEdgesWithAllocation(edges, nodes);
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-8-${Date.now()}`,
         esport,
         nodes,
-        edges,
+        edges: updatedEdges,
         editable: true,
         metadata: {
           createdAt: new Date().toISOString(),
@@ -661,12 +670,15 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       // Calcular slots de eliminación automáticamente
       const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
+      // Actualizar edges con asignación automática
+      const updatedEdges = updateEdgesWithAllocation(edges, nodes);
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-16-${Date.now()}`,
         esport,
         nodes,
-        edges,
+        edges: updatedEdges,
         editable: true,
         metadata: {
           createdAt: new Date().toISOString(),
@@ -997,12 +1009,15 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       // Calcular slots de eliminación automáticamente
       const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
+      // Actualizar edges con asignación automática
+      const updatedEdges = updateEdgesWithAllocation(edges, nodes);
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-doble-8-${Date.now()}`,
         esport,
         nodes,
-        edges,
+        edges: updatedEdges,
         editable: true,
         metadata: {
           createdAt: new Date().toISOString(),
@@ -1355,12 +1370,15 @@ export const TOURNAMENT_TEMPLATES: TournamentTemplate[] = [
       // Calcular slots de eliminación automáticamente
       const nodes = calculateAndUpdateEliminationSlots(initialNodes, edges);
 
+      // Actualizar edges con asignación automática
+      const updatedEdges = updateEdgesWithAllocation(edges, nodes);
+
       return {
         version: 1,
         tournamentId: `template-eliminacion-doble-16-${Date.now()}`,
         esport,
         nodes,
-        edges,
+        edges: updatedEdges,
         editable: true,
         metadata: {
           createdAt: new Date().toISOString(),
